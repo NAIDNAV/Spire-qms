@@ -1,0 +1,86 @@
+name: Release Artifacts
+
+on:
+  release:
+    types:
+      - created
+
+env:
+  # ADF_DEV_RESOURCEID: ${{ secrets.MEF_ADF_POC_RESOURCEID }}
+  JFrog_URL: "https://artifacts.i.mercedes-benz.com"
+  ARTIFACTORY: "spire-generic-local"
+  DOTNET_INSTALL_DIR: "runner/dotnet"
+
+jobs:
+  ADF_Artifacts:
+    runs-on: [ azure-runners ]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Create ADF Artifact
+        run: |
+          cd ./adf/
+          tar -czvf adf_artifact.tar.gz ./armTemplate/* ./PrePostDeploymentScript.ps1
+          mv ./adf_artifact.tar.gz ./..
+
+      - name: Setup JFrog
+        uses: jfrog/setup-jfrog-cli@v3.3.0
+        env:
+          JF_URL: ${{env.JFrog_URL}}
+          JF_USER: ${{secrets.JFROG_ARTIFACTORY_USER}}
+          JF_PASSWORD: ${{secrets.JFROG_ARTIFACTORY_API_KEY}}
+
+      - name: Upload Artifact
+        run: |
+          jfrog rt upload --recursive --flat=false --build-number=${{ github.run_number }} ./adf_artifact.tar.gz ${{ env.ARTIFACTORY }}/mdmf/${{github.event.release.tag_name}}/adf/
+
+  DX_Artifacts:
+    runs-on: [ azure-runners ]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Create DX Artifact
+        run: |
+          cd ./dx/
+          tar -czvf notebooks.tar.gz notebooks/mdmf
+          mv ./notebooks.tar.gz ./..
+
+      - name: Setup JFrog
+        uses: jfrog/setup-jfrog-cli@v3.2.0
+        env:
+          JF_URL: ${{env.JFrog_URL}}
+          JF_USER: ${{secrets.JFROG_ARTIFACTORY_USER}}
+          JF_PASSWORD: ${{secrets.JFROG_ARTIFACTORY_API_KEY}}
+
+      - name: Upload Artifact
+        run: |
+          jfrog rt upload --recursive --flat=false --build-number=${{ github.run_number }} ./notebooks.tar.gz ${{ env.ARTIFACTORY }}/mdmf/${{github.event.release.tag_name}}/dx/
+
+  DB_Artifact:
+    runs-on: [ azure-runners ]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup dotnet core SDK
+        uses: actions/setup-dotnet@v3.0.3
+        with:
+          dotnet-version: 6.0.x
+
+      - name: Create DB Artifact
+        run: |
+          dotnet build db/mdmf_db.sqlproj -p:NetCoreBuild=true -c Release
+          mv ./db/bin/Release/mdmf_db.dacpac ./
+
+      - name: Setup JFrog CLI
+        uses: jfrog/setup-jfrog-cli@v3.2.0
+        env:
+          JF_URL: ${{env.JFrog_URL}}
+          JF_USER: ${{secrets.JFROG_ARTIFACTORY_USER}}
+          JF_PASSWORD: ${{secrets.JFROG_ARTIFACTORY_API_KEY}}
+
+      - name: Upload dacpac file
+        run: |
+          jfrog rt upload --recursive --flat=false --build-number=${{ github.run_number }} ./mdmf_db.dacpac ${{ env.ARTIFACTORY }}/mdmf/${{github.event.release.tag_name}}/sql/

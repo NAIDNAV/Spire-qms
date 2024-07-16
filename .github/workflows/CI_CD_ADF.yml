@@ -1,0 +1,127 @@
+name: CI_CD_ADF
+
+on:
+  push:
+    branches:
+      - "**"
+    paths:
+      - 'adf/**'
+      - '!adf/armTemplate/**'
+      - '!adf/package.json'
+      - '!adf/publish_config.json'
+      - '!adf/sechub.json'
+
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'adf/**'
+      - '!adf/package.json'
+      - '!adf/publish_config.json'
+      - '!adf/sechub.json'
+
+env:
+  RESOURCEID_DEV: ${{secrets.RESOURCEID_MEF_DEV}}
+  SUBSCRIPTIONID_DEV: ${{secrets.SUBSCRIPTIONID_MEF_DEV}}
+  RESOURCEGROUP_DEV: 0001-d-cpmef
+  ADFNAME_DEV: ddfcpmef
+  CLIENT_ID_DEV: ${{secrets.CLIENT_ID_ADF_MEF_DEV}}
+  CLIENT_SECRET_DEV: ${{secrets.CLIENT_SECRET_ADF_MEF_DEV}}
+  TENANT_ID: ${{secrets.TENANT_ID}}
+  MattermostChannelName: ${{secrets.MATTERMOST_CHANNEL_MEF}}
+  MatterMostWebHookURL: ${{secrets.MATTERMOST_WEBHOOK_URL_MEF}}
+
+jobs:
+  CI_CD_ADF:
+    runs-on: [ azure-runners ]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Az Powershell Setup
+        shell: pwsh
+        run: |
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+          Install-Module Az
+
+      - name: Azure login
+        if: github.event_name == 'pull_request'
+        uses: azure/login@v1
+        with:
+          creds: '{"clientId":"${{ env.CLIENT_ID_DEV }}","clientSecret":"${{ env.CLIENT_SECRET_DEV }}","subscriptionId":"${{ env.SUBSCRIPTIONID_DEV }}","tenantId":"${{ env.TENANT_ID }}"}'
+          enable-AzPSSession: true
+
+      #- name: Validate Data Factory resources
+      #  uses: Azure/data-factory-validate-action@v1.1.5
+      #  if: github.event_name == 'push' &&  github.ref != 'refs/heads/master'
+      #  with:
+      #    path: ./adf
+      #    id: "${{env.RESOURCEID_DEV}}"
+
+      #- name: Export ARM Template
+      #  if: github.event_name == 'push' &&  github.ref != 'refs/heads/master'
+      #  id: export
+      #  uses: Azure/data-factory-export-action@v1.2.0
+      #  with:
+      #    path: ./adf
+      #    id: "${{env.RESOURCEID_DEV}}"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install ADF Utilities package
+        run: |
+          cd ./adf
+          npm install @microsoft/azure-data-factory-utilities@1.0.2
+          
+      - name: Validate ARM Template
+        if: github.event_name == 'push' &&  github.ref != 'refs/heads/master'
+        run: |
+          node ./adf/node_modules/@microsoft/azure-data-factory-utilities/lib/index validate ./adf ${{env.RESOURCEID_DEV}}
+
+      - name: Export ARM Template
+        if: github.event_name == 'push' &&  github.ref != 'refs/heads/master'
+        run: |
+          node ./adf/node_modules/@microsoft/azure-data-factory-utilities/lib/index export ./adf ${{ env.RESOURCEID_DEV}} ./adf/armTemplate
+
+      - name: Commit ArmTemplate
+        if: github.event_name == 'push' &&  github.ref != 'refs/heads/master'
+        continue-on-error: true
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git pull
+          git add ./adf/armTemplate/ARMTemplateForFactory.json
+          git add ./adf/armTemplate/ARMTemplateParametersForFactory.json
+          git commit --allow-empty -m "generated ARMTemplate"
+          git push
+
+      - name: PreDeploymentScriptDEV
+        if: github.event_name == 'pull_request'
+        uses: azure/powershell@v1
+        with:
+          inlineScript: |
+            .\adf\PrePostDeploymentScript.ps1 -armTemplate './adf/armTemplate/ARMTemplateForFactory.json' -ResourceGroupName "${{env.RESOURCEGROUP_DEV}}" -DataFactoryName "${{env.ADFNAME_DEV}}" -predeployment $true -isProduction no
+          azPSVersion: 'latest'
+          errorActionPreference: Continue
+
+      - name: Deploy on Dev from PR
+        if: github.event_name == 'pull_request'
+        uses: azure/arm-deploy@v1
+        with:
+          subscriptionId: "${{env.SUBSCRIPTIONID_DEV}}"
+          resourceGroupName: "${{env.RESOURCEGROUP_DEV}}"
+          deploymentMode: Incremental
+          deploymentName: ADFDeploy
+          template: ./adf/armTemplate/ARMTemplateForFactory.json
+          parameters: ./adf/armTemplate/ARMTemplateParametersForFactory.json PL_LogToMattermost_properties_parameters_Channel_defaultValue="${{env.MattermostChannelName}}" PL_LogToMattermost_properties_parameters_MatterMostWebHookURL_defaultValue="${{env.MatterMostWebHookURL}}"
+
+      - name: PostDeploymentScriptDEV
+        if: github.event_name == 'pull_request'
+        uses: azure/powershell@v1
+        with:
+          inlineScript: |
+            .\adf\PrePostDeploymentScript.ps1 -armTemplate './adf/armTemplate/ARMTemplateForFactory.json' -ResourceGroupName "${{env.RESOURCEGROUP_DEV}}" -DataFactoryName "${{env.ADFNAME_DEV}}" -predeployment $true -isProduction no
+          azPSVersion: 'latest'

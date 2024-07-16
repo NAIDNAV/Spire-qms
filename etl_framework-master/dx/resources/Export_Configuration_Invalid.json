@@ -1,0 +1,59 @@
+[
+    {
+        "Path": "Both Query and FwkLinkedServiceId are not specified"
+    },
+    {
+        "Path": "Both Query and FwkLinkedServiceId are specified",
+        "Query": "Query",
+        "FwkLinkedServiceId": "CompartmentADLS",
+        "SourcePath": "sourcePath"
+    },
+    {
+        "Query": "Query without Path and Entity"
+    },
+    {
+        "Query": "Query with both Path and Entity",
+        "Path": "path",
+        "Entity": "entity"
+    },
+    {
+        "Query": "Params can't be specified when exporting to Database",
+        "Entity": "entity",
+        "Params": {}
+    },
+    {
+        "FwkLinkedServiceId": "CompartmentADLS",
+        "SourcePath": "sourcePath",
+        "Path": "Params can't be specified when exporting from existing files",
+        "Params": {}
+    },
+    {
+        "Query": "Params_NotValidJSON",
+        "Path": "History_Customer.csv",
+        "Params": "not valid JSON"
+    },
+    {
+        "Query": "Query with both Path and Entity",
+        "Path": "path",
+        "PreCopyScript": "PreCopyScript can't be specified when exporting files"
+    },
+    {
+        "FwkLinkedServiceId": "NonExisting",
+        "SourcePath": "sourcePath",
+        "Path": "path"
+    },
+    {
+        "FwkLinkedServiceId": "CompartmentADLS",
+        "SourcePath": "sourcePath",
+        "Path": "path",
+        "PreCopyScript": "PreCopyScript can't be specified when exporting from existing files"
+    },
+    {
+        "FwkLinkedServiceId": "CompartmentADLS",
+        "Path": "SourcePath is mandatory when exporting from existing files"
+    },
+    {
+        "FwkLinkedServiceId": "CompartmentADLS",
+        "SourcePath": "Path is mandatory when exporting from existing files"
+    }
+]

@@ -1,0 +1,26 @@
+[
+    {
+        "Key": "SDM",
+        "Entities": [
+            {
+                "EntityName": "CustomerNoIdentity",
+                "Params": {
+                    "writeMode": "Snapshot",
+                    "keyColumns": [
+                        "CustomerID"
+                    ],
+                    "fwkTriggerId": "Weekly"
+                }
+            },
+            {
+                "EntityName": "Customer",
+                "Params": {
+                    "batchNumber": 0,
+                    "partitionColumns": [
+                        "CompanyName"
+                    ]
+                }
+            }
+        ]
+    }
+]

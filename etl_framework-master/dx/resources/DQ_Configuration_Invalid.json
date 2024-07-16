@@ -1,0 +1,251 @@
+[
+    {
+        "DatabaseName": "Database",
+        "Entities": [
+            {
+                "EntityName": "Entity",
+                "Expectations": [
+                    {
+                        "Description": "EntityName_Mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "ColA"
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "ColA"
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "ExpectationType_Mandatory",
+                        "KwArgs": {},
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "ExpectationType_InvalidValue",
+                        "ExpectationType": "invalid value",
+                        "KwArgs": {},
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "KwArgs_Mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "KwArgs_NotValidJSON",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": "not valid JSON",
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "KwArgs_MissingColumnArg",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {},
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "KwArgs_MissingColumnAArg",
+                        "ExpectationType": "expect_column_pair_values_to_be_equal",
+                        "KwArgs": {
+                            "column_B": "ColB"
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "KwArgs_MissingColumnBArg",
+                        "ExpectationType": "expect_column_pair_values_to_be_equal",
+                        "KwArgs": {
+                            "column_A": "ColA"
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "KwArgs_MissingColumnABArgs",
+                        "ExpectationType": "expect_column_pair_values_to_be_equal",
+                        "KwArgs": {},
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "KwArgs_MissingValueSet1Arg",
+                        "ExpectationType": "expect_column_distinct_values_to_be_in_set",
+                        "KwArgs": {
+                            "column": "ColA"
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "KwArgs_MissingValueSet2Arg",
+                        "ExpectationType": "expect_column_distinct_values_to_contain_set",
+                        "KwArgs": {
+                            "column": "ColA"
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "KwArgs_MissingValueSet3Arg",
+                        "ExpectationType": "expect_column_distinct_values_to_equal_set",
+                        "KwArgs": {
+                            "column": "ColA"
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "KwArgs_MissingValuePairSetArg",
+                        "ExpectationType": "expect_column_pair_values_to_be_in_set",
+                        "KwArgs": {
+                            "column_A": "ColA",
+                            "column_B": "ColB"
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "KwArgs_MissingMinMaxValueArgs",
+                        "ExpectationType": "expect_column_mean_to_be_between",
+                        "KwArgs": {
+                            "column": "ColA"
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "KwArgs_MissingValueArg",
+                        "ExpectationType": "expect_column_value_lengths_to_equal",
+                        "KwArgs": {
+                            "column": "ColA"
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "KwArgs_MissingSumTotalArg",
+                        "ExpectationType": "expect_multicolumn_sum_to_equal",
+                        "KwArgs": {
+                            "column_list": [
+                                "ColA",
+                                "ColB"
+                            ]
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "KwArgs_MissingQuantileRangesArg",
+                        "ExpectationType": "expect_column_quantile_values_to_be_between",
+                        "KwArgs": {
+                            "column": "ColA"
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "KwArgs_MissingTypeArg",
+                        "ExpectationType": "expect_column_values_to_be_of_type",
+                        "KwArgs": {
+                            "column": "ColA"
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "KwArgs_MissingRegexArg",
+                        "ExpectationType": "expect_column_values_to_match_regex",
+                        "KwArgs": {
+                            "column": "ColA"
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "KwArgs_MissingRegexListArg",
+                        "ExpectationType": "expect_column_values_to_match_regex_list",
+                        "KwArgs": {
+                            "column": "ColA"
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "KwArgs_MissingStrftimeFormatArg",
+                        "ExpectationType": "expect_column_values_to_match_strftime_format",
+                        "KwArgs": {
+                            "column": "ColA"
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "KwArgs_MissingColumnListArg",
+                        "ExpectationType": "expect_table_columns_to_match_ordered_list",
+                        "KwArgs": {},
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "KwArgs_MissingColumnSetArg",
+                        "ExpectationType": "expect_table_columns_to_match_set",
+                        "KwArgs": {},
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "KwArgs_MissingConditionArg",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {},
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "KwArgs_MissingJoinTableArg",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "TRUE",
+                            "joinType": "LEFT",
+                            "joinColumns": "colA,columnA"
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "KwArgs_MissingJoinTypeConditionArg",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "TRUE",
+                            "joinTable": "Database.Table",
+                            "joinColumns": "colA,columnA"
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "KwArgs_JoinTypeInvalidValue",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "TRUE",
+                            "joinType": "invalid value",
+                            "joinTable": "Database.Table",
+                            "joinColumns": "colA,columnA"
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "KwArgs_MissingJoinColumnsConditionArg",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "TRUE",
+                            "joinTable": "Database.Table",
+                            "joinType": "LEFT"
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "Quarantine_Mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "ColA"
+                        }
+                    },
+                    {
+                        "Description": "Quarantine_InvalidValue",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "ColA"
+                        },
+                        "Quarantine": "invalid value"
+                    }
+                ]
+            }
+        ]
+    }
+]

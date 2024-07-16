@@ -1,0 +1,46 @@
+{
+	"name": "DS_SFTP_BIN_Folder",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_sftp",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"InstanceURL": {
+					"value": "@dataset().FwkItem['InstanceURL']",
+					"type": "Expression"
+				},
+				"UserName": {
+					"value": "@dataset().FwkItem['UserName']",
+					"type": "Expression"
+				},
+				"SecretName": {
+					"value": "@dataset().FwkItem['SecretName']",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"FwkItem": {
+				"type": "array"
+			},
+			"FwkPath": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "01 Ingestion Module DS"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "SftpLocation",
+				"folderPath": {
+					"value": "@dataset().FwkPath",
+					"type": "Expression"
+				}
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

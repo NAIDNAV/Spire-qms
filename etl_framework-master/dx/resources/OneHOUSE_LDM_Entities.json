@@ -1,0 +1,30 @@
+[
+    {
+        "Entity": "Address",
+        "Stereotype": "Extended"
+    },
+    {
+        "Entity": "Customer",
+        "Stereotype": "Master Data"
+    },
+    {
+        "Entity": "CustomerNoIdentity",
+        "Stereotype": "Master Data"
+    },
+    {
+        "Entity": "CustomerAddress",
+        "Stereotype": "Extended"
+    },
+    {
+        "Entity": "SalesOrderHeader",
+        "Stereotype": "Master Data"
+    },
+    {
+        "Entity": "DimCurrency",
+        "Stereotype": "Extended"
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "Stereotype": "Extended"
+    }
+]

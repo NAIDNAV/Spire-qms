@@ -1,0 +1,181 @@
+[
+    {
+        "DatabaseName": "Application_MEF_Dimensional",
+        "Entities": [
+            {
+                "EntityName": "dimCustomer",
+                "Expectations": [
+                    {
+                        "Description": "CustomerID can not be null",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "CustomerID"
+                        },
+                        "Quarantine": true,
+                        "DQLogOutput": "FirstName, LastName"
+                    }
+                ]
+            },
+            {
+                "EntityName": "factCustomerSales",
+                "Expectations": [
+                    {
+                        "Description": "SalesOrderID can not be null",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "SalesOrderID"
+                        },
+                        "Quarantine": true,
+                        "DQLogOutput": "CustomerID"
+                    },
+                    {
+                        "Description": "CustomerID can not be null",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "CustomerID"
+                        },
+                        "Quarantine": true,
+                        "DQLogOutput": "SalesOrderID"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "DatabaseName": "Application_MEF_StagingCSV",
+        "Entities": [
+            {
+                "EntityName": "CustomerCSV",
+                "Expectations": [
+                    {
+                        "Description": "List of column must match",
+                        "ExpectationType": "expect_table_columns_to_match_set",
+                        "KwArgs": {
+                            "column_set": [
+                                "CustomerID",
+                                "DateField",
+                                "Order",
+                                "SomeString",
+                                "ColBooleanType",
+                                "ColIntegerType",
+                                "ExtraColumn"
+                            ]
+                        },
+                        "Quarantine": true
+                    },
+                    {
+                        "Description": "Order of columns must match",
+                        "ExpectationType": "expect_table_columns_to_match_ordered_list",
+                        "KwArgs": {
+                            "column_list": [
+                                "CustomerID",
+                                "DateField",
+                                "Order",
+                                "SomeString",
+                                "ColBooleanType",
+                                "ColIntegerType",
+                                "ExtraColumn"
+                            ]
+                        },
+                        "Quarantine": true
+                    },
+                    {
+                        "Description": "Value length of column SomeString must be between 0 and 100",
+                        "ExpectationType": "expect_column_value_lengths_to_be_between",
+                        "KwArgs": {
+                            "column": "SomeString",
+                            "min_value": 0,
+                            "max_value": 100
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "CustomerID"
+                    },
+                    {
+                        "Description": "Value length of column SomeString  must be exactly 14",
+                        "ExpectationType": "expect_column_value_lengths_to_equal",
+                        "KwArgs": {
+                            "column": "SomeString",
+                            "value": 14
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "CustomerID"
+                    },
+                    {
+                        "Description": "Value of column ColBooleanType must be either 0 or 1",
+                        "ExpectationType": "expect_column_values_to_be_in_set",
+                        "KwArgs": {
+                            "column": "ColBooleanType",
+                            "value_set": [
+                                0,
+                                1
+                            ]
+                        },
+                        "Quarantine": true,
+                        "DQLogOutput": "CustomerID"
+                    },
+                    {
+                        "Description": "Value of column SomeString must be 'somelongstring'",
+                        "ExpectationType": "expect_column_values_to_be_in_set",
+                        "KwArgs": {
+                            "column": "SomeString",
+                            "value_set": [
+                                "somelongstring"
+                            ]
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "CustomerID"
+                    },
+                    {
+                        "Description": "Value of column DateField must be valid date",
+                        "ExpectationType": "expect_column_values_to_match_regex",
+                        "KwArgs": {
+                            "column": "DateField",
+                            "regex": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "CustomerID, DateField"
+                    },
+                    {
+                        "Description": "Value of column DateField must be valid integer",
+                        "ExpectationType": "expect_column_values_to_match_regex",
+                        "KwArgs": {
+                            "column": "Order",
+                            "regex": "^\\d+$"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "CustomerID, Order"
+                    }
+                ]
+            },
+            {
+                "EntityName": "Customer[*]",
+                "Expectations": [
+                    {
+                        "Description": "Value of column DateField must be start with 'CUS-'",
+                        "ExpectationType": "expect_column_values_to_match_regex",
+                        "KwArgs": {
+                            "column": "CustomerID",
+                            "regex": "^CUS-"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "CustomerID"
+                    }
+                ]
+            },
+            {
+                "EntityName": "Customer[CSV, BNX, THX]",
+                "Expectations": [
+                    {
+                        "Description": "CustomerID must be unique",
+                        "ExpectationType": "expect_column_values_to_be_unique",
+                        "KwArgs": {
+                            "column": "CustomerID"
+                        },
+                        "Quarantine": true,
+                        "DQLogOutput": "CustomerID"
+                    }
+                ]
+            }
+        ]
+    }
+]

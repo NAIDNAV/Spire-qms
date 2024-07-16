@@ -1,0 +1,79 @@
+{
+	"name": "DS_ADLS_CSV_File_Export",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_adls",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"InstanceURL": {
+					"value": "@dataset().FwkItem['InstanceURL']",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"FwkItem": {
+				"type": "array"
+			}
+		},
+		"folder": {
+			"name": "03 Export Module DS"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@split(dataset().FwkItem['Path'], '/')[2]",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@split(dataset().FwkItem['Path'], '/')[1]",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "@split(dataset().FwkItem['Path'], '/')[0]",
+					"type": "Expression"
+				}
+			},
+			"columnDelimiter": {
+				"value": "@{if(contains(json(dataset().FwkItem['Params']), 'columnDelimiter'), json(dataset().FwkItem['Params']).columnDelimiter, ',')}",
+				"type": "Expression"
+			},
+			"rowDelimiter": {
+				"value": "@{if(contains(json(dataset().FwkItem['Params']), 'rowDelimiter'), json(dataset().FwkItem['Params']).rowDelimiter, '\n')}",
+				"type": "Expression"
+			},
+			"compressionCodec": {
+				"value": "@{if(\n    contains(json(dataset().FwkItem['Params']), 'compressionType'),\n    json(dataset().FwkItem['Params']).compressionType,\n    'None'\n)}",
+				"type": "Expression"
+			},
+			"compressionLevel": {
+				"value": "@{if(\n    contains(json(dataset().FwkItem['Params']), 'compressionLevel'),\n    json(dataset().FwkItem['Params']).compressionLevel,\n    ''\n)}",
+				"type": "Expression"
+			},
+			"encodingName": {
+				"value": "@{if(\n    contains(json(dataset().FwkItem['Params']), 'encodingName'),\n    json(dataset().FwkItem['Params']).encodingName,\n    'UTF-8'\n)}",
+				"type": "Expression"
+			},
+			"escapeChar": {
+				"value": "@{if(\n    contains(json(dataset().FwkItem['Params']), 'escapeChar'),\n    json(dataset().FwkItem['Params']).escapeChar,\n    '\\'\n)}",
+				"type": "Expression"
+			},
+			"firstRowAsHeader": {
+				"value": "@json(dataset().FwkItem['Params']).header",
+				"type": "Expression"
+			},
+			"nullValue": {
+				"value": "@{if(\n    contains(json(dataset().FwkItem['Params']), 'nullValue'),\n    json(dataset().FwkItem['Params']).nullValue,\n    ''\n)}",
+				"type": "Expression"
+			},
+			"quoteChar": {
+				"value": "@{if(\n    contains(json(dataset().FwkItem['Params']), 'quoteChar'),\n    json(dataset().FwkItem['Params']).quoteChar,\n    '\"'\n)}",
+				"type": "Expression"
+			}
+		},
+		"schema": []
+	}
+}

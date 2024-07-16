@@ -1,0 +1,46 @@
+[
+    {
+        "Value1": "ReferenceKey1_Mandatory",
+        "Description1": "Some description 1",
+        "ReferenceKey2": "ReferenceKey2",
+        "Value2": "Value2",
+        "Description2": "Some description 2"
+    },
+    {
+        "ReferenceKey1": "Value1_Mandatory",
+        "Description1": "Some description 1",
+        "ReferenceKey2": "ReferenceKey2",
+        "Value2": "Value2",
+        "Description2": "Some description 2"
+    },
+    {
+        "ReferenceKey1": "ReferenceKey1",
+        "Value1": "Value1",
+        "Description1": "Some description 1",
+        "Value2": "ReferenceKey2_Mandatory",
+        "Description2": "Some description 2"
+    },
+    {
+        "ReferenceKey1": "ReferenceKey1",
+        "Value1": "Value1",
+        "Description1": "Some description 1",
+        "ReferenceKey2": "Value2_Mandatory",
+        "Description2": "Some description 2"
+    },
+    {
+        "ReferenceKey1": "ReferenceKey1",
+        "Value1": "Value1",
+        "Description1": "Some description 1a",
+        "ReferenceKey2": "ReferenceKey2",
+        "Value2": "Value2",
+        "Description2": "Some description 2a"
+    },
+    {
+        "ReferenceKey1": "ReferenceKey1",
+        "Value1": "Value1",
+        "Description1": "Some description 1b",
+        "ReferenceKey2": "ReferenceKey2",
+        "Value2": "Value2",
+        "Description2": "Some description 2b"
+    }
+]

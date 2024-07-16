@@ -1,0 +1,178 @@
+{
+	"name": "PL_COG_01_GenerateConfig",
+	"properties": {
+		"activities": [
+			{
+				"name": "DT_RunConfigGeneratorNotebook",
+				"type": "DatabricksNotebook",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "@concat('/Code/mdmf/generator/', pipeline().parameters.NotebookName)",
+						"type": "Expression"
+					},
+					"baseParameters": {
+						"ForceConfigGeneration": {
+							"value": "@string(equals(pipeline().parameters.GenerateConfigParameter, 'Full'))",
+							"type": "Expression"
+						},
+						"FwkLogParameters": {
+							"value": "@concat(\n'{\"EntRunId\": \"',pipeline().parameters.EntRunId,'\",\"Module\":\"Config Generation - ', pipeline().parameters.NotebookName,'\",\"ModuleRunId\":\"',pipeline().RunId,'\",\"StartDate\":\"',formatdatetime(pipeline().TriggerTime),'\",\"AdfTriggerName\":\"None\"}')\n",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_databricks",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ClusterId": "0214-064848-zi0j9fjh"
+					}
+				}
+			},
+			{
+				"name": "If Column Change Log exists",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "DT_RunConfigGeneratorNotebook",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@empty(activity('DT_RunConfigGeneratorNotebook').output.runOutput['ColumnChangeLogs'])",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Log ETL Metadata Execution Column Changes To Mattermost",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_LogToMattermost",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Message": {
+										"value": "@concat('Execution of pipeline ''PL_COG_01_GenerateConfig'' responsible for generating ETL configuration has found changes: \\n', activity('DT_RunConfigGeneratorNotebook').output.runOutput['ColumnChangeLogs'])",
+										"type": "Expression"
+									},
+									"EntRunId": {
+										"value": "@pipeline().parameters.EntRunId",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "If TrigerCreration pipeline runs",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "DT_RunConfigGeneratorNotebook",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(activity('DT_RunConfigGeneratorNotebook').output.runOutput['ExecuteTriggerCreationPipeline'], 'True')",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Execute PL_TriggerCreation",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_TriggerCreation",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "UpdateNotebookExecutionLog",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "DT_RunConfigGeneratorNotebook",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureDatabricksDeltaLakeSource",
+						"query": {
+							"value": "@concat(\n    'UPDATE ', pipeline().globalParameters.MetadataDB, '.FwkLog ',\n    'SET PipelineStatus = ''Failed'', EndDate = ''', formatDateTime(utcnow()), '''',\n    ' LastUpdate = ''', formatDateTime(utcnow()), '''',\n    ' JobRunUrl = ''', activity('DT_RunConfigGeneratorNotebook').output.runPageUrl, '''',\n    ' ErrorMessage = ''', activity('DT_RunConfigGeneratorNotebook').output.errors[0].Message, '''',\n    ' WHERE ModuleRunId = ''', pipeline().RunId, '''' \n)",
+							"type": "Expression"
+						}
+					},
+					"dataset": {
+						"referenceName": "DS_ADB_Delta",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			}
+		],
+		"parameters": {
+			"EntRunId": {
+				"type": "string"
+			},
+			"NotebookName": {
+				"type": "string"
+			},
+			"GenerateConfigParameter": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "00 Config Generator Module"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-07-06T08:29:15Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

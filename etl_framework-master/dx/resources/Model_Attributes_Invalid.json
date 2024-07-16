@@ -1,0 +1,67 @@
+[
+    {
+        "Entity": "Address",
+        "Attribute": "WK_Address_Identifier",
+        "DataType": "bigint",
+        "IsPrimaryKey": true,
+        "IsIdentity": true
+    },
+    {
+        "Entity": "CustomerAddress",
+        "Attribute": "WK_Address_Identifier",
+        "DataType": "bigint",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Attribute": "WK_Address_Identifier",
+        "DataType": "bigint",
+        "IsPrimaryKey": true,
+        "IsIdentity": true
+    },
+    {
+        "Entity": "Address",
+        "DataType": "bigint",
+        "IsPrimaryKey": true,
+        "IsIdentity": true
+    },
+    {
+        "Entity": "Address",
+        "Attribute": "WK_Address_Identifier",
+        "IsPrimaryKey": true,
+        "IsIdentity": true
+    },
+    {
+        "Entity": "Address",
+        "Attribute": "WK_Address_Identifier",
+        "DataType": "invalid value",
+        "IsPrimaryKey": true,
+        "IsIdentity": true
+    },
+    {
+        "Entity": "Address",
+        "Attribute": "WK_Address_Identifier",
+        "DataType": "bigint",
+        "IsIdentity": true
+    },
+    {
+        "Entity": "Address",
+        "Attribute": "WK_Address_Identifier",
+        "DataType": "bigint",
+        "IsPrimaryKey": "invalid value",
+        "IsIdentity": true
+    },
+    {
+        "Entity": "Address",
+        "Attribute": "WK_Address_Identifier",
+        "DataType": "bigint",
+        "IsPrimaryKey": true
+    },
+    {
+        "Entity": "Address",
+        "Attribute": "WK_Address_Identifier",
+        "DataType": "bigint",
+        "IsPrimaryKey": true,
+        "IsIdentity": "invalid value"
+    }
+]

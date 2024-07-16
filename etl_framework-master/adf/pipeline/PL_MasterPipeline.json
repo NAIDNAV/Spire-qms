@@ -1,0 +1,199 @@
+{
+	"name": "PL_MasterPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "Lookup FwkTriggerId",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[dbo].[sps_LookupFwkTriggerId]",
+						"storedProcedureParameters": {
+							"ADFTriggerName": {
+								"type": "String",
+								"value": {
+									"value": "@if(\n    equals(pipeline().parameters.ADFTriggerName, 'none'),\n    pipeline().TriggerName,\n    pipeline().parameters.ADFTriggerName\n)",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "DS_SQL_Configuration",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": true
+				}
+			},
+			{
+				"name": "Execute Is Pipeline Running",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Lookup FwkTriggerId",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "PL_PipelineRunStatus",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"CancelIfAlreadyRunning": {
+							"value": "@activity('Lookup FwkTriggerId').output.firstRow['FwkCancelIfAlreadyRunning']",
+							"type": "Expression"
+						},
+						"ADFTriggerName": {
+							"value": "@pipeline().parameters.ADFTriggerName",
+							"type": "Expression"
+						},
+						"FwkLayerId": {
+							"value": "@pipeline().parameters.FwkLayerId",
+							"type": "Expression"
+						},
+						"MasterRunId": {
+							"value": "@pipeline().RunId",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "If PipelineRuninParallel",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Execute Is Pipeline Running",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@activity('Lookup FwkTriggerId').output.firstRow['FwkRunInParallelWithOthers']\n    ",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Execute ETL Pipeline Queue",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_ETLPipeline_Queue",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"EntRunId": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"EntTriggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"FwkTriggerId": {
+										"value": "@activity('Lookup FwkTriggerId').output.firstRow['FwkTriggerId']",
+										"type": "Expression"
+									},
+									"FwkLayerId": {
+										"value": "@pipeline().parameters.FwkLayerId",
+										"type": "Expression"
+									},
+									"ADFTriggerName": {
+										"value": "@pipeline().parameters.ADFTriggerName",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Execute ETL Pipeline Parallel Check",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_ETLPipeline_Parallel",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": false,
+								"parameters": {
+									"EntRunId": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"EntTriggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"FwkTriggerId": {
+										"value": "@activity('Lookup FwkTriggerId').output.firstRow['FwkTriggerId']",
+										"type": "Expression"
+									},
+									"FwkLayerId": {
+										"value": "@pipeline().parameters.FwkLayerId",
+										"type": "Expression"
+									},
+									"ADFTriggerName": {
+										"value": "@if(\n    equals(pipeline().parameters.ADFTriggerName, 'none'),\n    pipeline().TriggerName,\n    pipeline().parameters.ADFTriggerName\n)",
+										"type": "Expression"
+									},
+									"CancelIfAlreadyRunning": {
+										"value": "@activity('Lookup FwkTriggerId').output.firstRow['FwkCancelIfAlreadyRunning']",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"ADFTriggerName": {
+				"type": "string",
+				"defaultValue": "none"
+			},
+			"FwkLayerId": {
+				"type": "string",
+				"defaultValue": "none"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-07-06T08:29:23Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

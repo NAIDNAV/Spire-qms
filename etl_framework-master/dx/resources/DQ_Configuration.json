@@ -1,0 +1,343 @@
+[
+    {
+        "DatabaseName": "Application_MEF_StagingSQL",
+        "Entities": [
+            {
+                "EntityName": "Customer",
+                "Expectations": [
+                    {
+                        "Description": "CustomerID can not be null",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "CustomerID"
+                        },
+                        "Quarantine": true,
+                        "DQLogOutput": "FirstName, LastName, rowguid"
+                    },
+                    {
+                        "Description": "CustomerID can be between 1 and 30110",
+                        "ExpectationType": "expect_column_values_to_be_between",
+                        "KwArgs": {
+                            "column": "CustomerID",
+                            "min_value": 1,
+                            "max_value": 30110
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "CustomerID"
+                    },
+                    {
+                        "Description": "FirstName can not be null",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "FirstName"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "CustomerID"
+                    },
+                    {
+                        "Description": "MiddleName can not be null",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "MiddleName"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "CustomerID"
+                    },
+                    {
+                        "Description": "LastName can not be null",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "LastName"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "CustomerID"
+                    }
+                ]
+            },
+            {
+                "EntityName": "Address",
+                "Expectations": [
+                    {
+                        "Description": "Value of column CountryRegion must match reference values",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "CountryRegion NOT IN (#CountryRegion)"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "AddressID, CountryRegion"
+                    }
+                ]
+            },
+            {
+                "EntityName": "CustomerAddress",
+                "Expectations": [
+                    {
+                        "Description": "Value of column AddressType must match reference values",
+                        "ExpectationType": "expect_column_values_to_be_in_set",
+                        "KwArgs": {
+                            "column": "AddressType",
+                            "value_set": "#AddressType"
+                        },
+                        "Quarantine": true,
+                        "DQLogOutput": "CustomerID, AddressID, AddressType"
+                    }
+                ]
+            },
+            {
+                "EntityName": "SalesOrderHeader",
+                "Expectations": [
+                    {
+                        "Description": "SalesOrderID can not be null",
+                        "ExpectationType": "expect_column_pair_values_to_be_in_set",
+                        "KwArgs": {
+                            "column_A": "RevisionNumber",
+                            "column_B": "Status",
+                            "value_pairs_set": [
+                                [
+                                    2,
+                                    5
+                                ],
+                                [
+                                    3,
+                                    4
+                                ]
+                            ]
+                        },
+                        "Quarantine": true,
+                        "DQLogOutput": "SalesOrderID, RevisionNumber, Status"
+                    },
+                    {
+                        "Description": "SalesOrderID can not be null",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "SalesOrderID"
+                        },
+                        "Quarantine": true,
+                        "DQLogOutput": "rowguid"
+                    },
+                    {
+                        "Description": "SalesOrderID must be greater or equal to 1",
+                        "ExpectationType": "expect_column_values_to_be_between",
+                        "KwArgs": {
+                            "column": "SalesOrderID",
+                            "min_value": 1
+                        },
+                        "Quarantine": true,
+                        "DQLogOutput": "rowguid"
+                    },
+                    {
+                        "Description": "SubTotal can be between 0.01 and 100000",
+                        "ExpectationType": "expect_column_values_to_be_between",
+                        "KwArgs": {
+                            "column": "SubTotal",
+                            "min_value": 0.01,
+                            "max_value": 100000
+                        },
+                        "Quarantine": true,
+                        "DQLogOutput": "SalesOrderID, SubTotal"
+                    },
+                    {
+                        "Description": "TaxAmt must be greater or equal to 0",
+                        "ExpectationType": "expect_column_values_to_be_between",
+                        "KwArgs": {
+                            "column": "TaxAmt",
+                            "min_value": 0
+                        },
+                        "Quarantine": true,
+                        "DQLogOutput": "SalesOrderID"
+                    },
+                    {
+                        "Description": "Freight must be greater or equal to 0",
+                        "ExpectationType": "expect_column_values_to_be_between",
+                        "KwArgs": {
+                            "column": "Freight",
+                            "min_value": 0
+                        },
+                        "Quarantine": true,
+                        "DQLogOutput": "SalesOrderID"
+                    },
+                    {
+                        "Description": "Minimal order before year 2010 is 10 Euros",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "OrderDate < '2010-01-01' AND TotalDue < 10"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "SalesOrderID, TotalDue"
+                    },
+                    {
+                        "Description": "Minimal order after year 2010 is 5 Euros",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "OrderDate >= '2010-01-01' AND TotalDue < 5"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "SalesOrderID, TotalDue"
+                    },
+                    {
+                        "Description": "Orders with more than 1300 orders per customer are suspicious",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "column": "CustomerID",
+                            "condition": "GROUP BY CustomerID HAVING Count(CustomerID) > 1300"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "CustomerID, SalesOrderID"
+                    }
+                ]
+            },
+            {
+                "EntityName": "Contract",
+                "Expectations": [
+                    {
+                        "Description": "Compare the incoming Contract data to Contract History table",
+                        "ExpectationType": "compare_datasets",
+                        "KwArgs": {
+                            "compareAgainst": "Application_MEF_History.Contract",
+                            "comparedColumn": "ContractNumber,ContractNumber",
+                            "condition": "table.Market = Application_MEF_History.Contract.Market and DATEADD(month,-1,table.ReportDate) = Application_MEF_History.Contract.ReportDate",
+                            "expectation": "fullMatch"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "ContractNumber, Application_MEF_History.Contract.ContractNumber, Application_MEF_History.Contract.Market"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "DatabaseName": "Application_MEF_History",
+        "Entities": [
+            {
+                "EntityName": "Customer",
+                "Expectations": [
+                    {
+                        "Description": "CustomerID can not be null",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "CustomerID"
+                        },
+                        "Quarantine": true,
+                        "DQLogOutput": "FirstName, LastName"
+                    },
+                    {
+                        "Description": "CustomerID can be between 1 and 30110",
+                        "ExpectationType": "expect_column_values_to_be_between",
+                        "KwArgs": {
+                            "column": "CustomerID",
+                            "min_value": 1,
+                            "max_value": 30110
+                        },
+                        "Quarantine": true,
+                        "DQLogOutput": "CustomerID"
+                    }
+                ]
+            },
+            {
+                "EntityName": "SalesOrderHeader",
+                "Expectations": [
+                    {
+                        "Description": "SalesOrderID can not be null",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "SalesOrderID"
+                        },
+                        "Quarantine": true,
+                        "DQLogOutput": "rowguid"
+                    },
+                    {
+                        "Description": "SalesOrderID must be greater or equal to 1",
+                        "ExpectationType": "expect_column_values_to_be_between",
+                        "KwArgs": {
+                            "column": "SalesOrderID",
+                            "min_value": 1
+                        },
+                        "Quarantine": true,
+                        "DQLogOutput": "rowguid"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "DatabaseName": "Application_MEF_SDM",
+        "Entities": [
+            {
+                "EntityName": "[*]Customer",
+                "Expectations": [
+                    {
+                        "Description": "CustomerID can not be null",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "CustomerID"
+                        },
+                        "Quarantine": true,
+                        "DQLogOutput": "FirstName, LastName"
+                    },
+                    {
+                        "Description": "Find customers with suspicious orders",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "column": "CustomerID",
+                            "joinTable": "Application_MEF_History.SalesOrderHeader",
+                            "joinType": "LEFT",
+                            "joinColumns": "CustomerID,CustomerID",
+                            "condition": "Application_MEF_History.SalesOrderHeader.SubTotal > 70000"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "CustomerID, Application_MEF_History.SalesOrderHeader.SalesOrderID, Application_MEF_History.SalesOrderHeader.SubTotal"
+                    },
+                    {
+                        "Description": "Find customers with suspicious orders based on ship method",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "column": "CustomerID",
+                            "joinTable": "Application_MEF_History.SalesOrderHeader",
+                            "joinType": "LEFT",
+                            "joinColumns": "CustomerID,CustomerID",
+                            "condition": "GROUP BY table.CustomerID, Application_MEF_History.SalesOrderHeader.ShipMethod HAVING SUM(Application_MEF_History.SalesOrderHeader.SubTotal) > 70000"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "CustomerID, Application_MEF_History.SalesOrderHeader.ShipMethod, Application_MEF_History.SalesOrderHeader.SalesOrderID"
+                    }
+                ]
+            },
+            {
+                "EntityName": "SalesOrderHeader",
+                "Expectations": [
+                    {
+                        "Description": "SalesOrderID can not be null",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "SalesOrderID"
+                        },
+                        "Quarantine": true,
+                        "DQLogOutput": "CustomerID"
+                    },
+                    {
+                        "Description": "CustomerID can not be null",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "CustomerID"
+                        },
+                        "Quarantine": true,
+                        "DQLogOutput": "SalesOrderID"
+                    },
+                    {
+                        "Description": "For each order there should be a customer existing in Customer table",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "column": "CustomerID",
+                            "joinTable": "Application_MEF_History.Customer",
+                            "joinType": "LEFT",
+                            "joinColumns": "CustomerID,CustomerID",
+                            "condition": "Application_MEF_History.Customer.CustomerID IS NULL GROUP BY table.CustomerID"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "CustomerID"
+                    }
+                ]
+            }
+        ]
+    }
+]

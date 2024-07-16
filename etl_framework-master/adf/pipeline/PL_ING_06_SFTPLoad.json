@@ -1,0 +1,151 @@
+{
+	"name": "PL_ING_06_SFTPLoad",
+	"properties": {
+		"activities": [
+			{
+				"name": "Switch_Format",
+				"description": "Evaluates the input value ‘Format’ corresponding to a case that matches the condition.",
+				"type": "Switch",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@string(pipeline().parameters.FwkItem['Format'])",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "CSV",
+							"activities": [
+								{
+									"name": "Execute PL_ING_06_01_SFTPCSVCheck",
+									"description": "",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "PL_ING_06_01_SFTPCSVCheck",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"FwkItem": {
+												"value": "@pipeline().parameters.FwkItem",
+												"type": "Expression"
+											},
+											"PL_01TriggerTime": {
+												"value": "@pipeline().parameters.PL_01TriggerTime",
+												"type": "Expression"
+											},
+											"EntRunId": {
+												"value": "@pipeline().parameters.EntRunId",
+												"type": "Expression"
+											},
+											"ModuleRunId": {
+												"value": "@pipeline().parameters.ModuleRunId",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "EXCEL",
+							"activities": [
+								{
+									"name": "Execute PL_ING_06_02_SFTPExcelCheck",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "PL_ING_06_02_SFTPExcelCheck",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"FwkItem": {
+												"value": "@pipeline().parameters.FwkItem",
+												"type": "Expression"
+											},
+											"PL_01TriggerTime": {
+												"value": "@pipeline().parameters.PL_01TriggerTime",
+												"type": "Expression"
+											},
+											"EntRunId": {
+												"value": "@pipeline().parameters.EntRunId",
+												"type": "Expression"
+											},
+											"ModuleRunId": {
+												"value": "@pipeline().parameters.ModuleRunId",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "XML",
+							"activities": [
+								{
+									"name": "Execute PL_ING_06_03_SFTPXMLCheck",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "PL_ING_06_03_SFTPXMLCheck",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"FwkItem": {
+												"value": "@pipeline().parameters.FwkItem",
+												"type": "Expression"
+											},
+											"PL_01TriggerTime": {
+												"value": "@pipeline().parameters.PL_01TriggerTime",
+												"type": "Expression"
+											},
+											"EntRunId": {
+												"value": "@pipeline().parameters.EntRunId",
+												"type": "Expression"
+											},
+											"ModuleRunId": {
+												"value": "@pipeline().parameters.ModuleRunId",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"FwkItem": {
+				"type": "array"
+			},
+			"PL_01TriggerTime": {
+				"type": "string"
+			},
+			"EntRunId": {
+				"type": "string"
+			},
+			"ModuleRunId": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "01 Ingestion Module/06 SFTP"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-07-06T08:29:17Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

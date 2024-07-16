@@ -1,0 +1,736 @@
+{
+	"name": "PL_TRN_03_PreProcessLayer",
+	"properties": {
+		"activities": [
+			{
+				"name": "sp_FwkLogInsert",
+				"description": "Executes the SP spi_FwkLogInsert to insert record into FwkLog table with the execution module information by pipeline id and with null status.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spi_FwkLogInsert]",
+					"storedProcedureParameters": {
+						"EntRunId": {
+							"value": {
+								"value": "@pipeline().parameters.EntRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"Module": {
+							"value": {
+								"value": "@concat('Transformation > ',\n    pipeline().parameters.LayerItem['FwkLayerId'], ' Layer'\n)",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"StartDate": {
+							"value": {
+								"value": "@formatdatetime(pipeline().TriggerTime)",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						},
+						"ADFTriggerName": {
+							"value": {
+								"value": "@pipeline().parameters.ADFTriggerName",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "If PreTransformationNotebookRun",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "sp_FwkLogInsert",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@not(equals(pipeline().parameters.LayerItem['PreTransformationNotebookRun'], null))",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "DT_RunPreTransformationNotebook",
+							"type": "DatabricksNotebook",
+							"dependsOn": [
+								{
+									"activity": "sp_FwkLogInsert_PreTrasnformation",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": {
+									"value": "@concat('/Code/compartment/', pipeline().parameters.LayerItem['PreTransformationNotebookRun'])",
+									"type": "Expression"
+								},
+								"baseParameters": {
+									"FwkTriggerId": {
+										"value": "@pipeline().parameters.FwkTriggerId",
+										"type": "Expression"
+									},
+									"ADFTriggerName": {
+										"value": "@pipeline().parameters.ADFTriggerName",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_databricks",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"ClusterId": {
+										"value": "@pipeline().parameters.LayerItem['ClusterId']",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "sp_UpdatePreTrasnformationLog_succeeded",
+							"description": "Executes the SP spu_FwkLogUpdate to update the record created by the ‘InsertIntoFwkLog’ activity in the table ‘FwkLog’ by updating the columns ‘PipelineStatus’ to ‘Success’.",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "DT_RunPreTransformationNotebook",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[spu_FwkLogUpdate]",
+								"storedProcedureParameters": {
+									"ModuleRunId": {
+										"value": {
+											"value": "@concat(pipeline().RunId, '-pre')",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"PipelineStatus": {
+										"value": {
+											"value": "Succeeded",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"JobRunUrl": {
+										"value": {
+											"value": "@activity('DT_RunPreTransformationNotebook').output.runPageUrl",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_configurationDB",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "sp_UpdatePreTrasnformationLog_failed",
+							"description": "Executes the SP spu_FwkLogUpdate to update the record created by the ‘InsertIntoFwkLog’ activity in the table ‘FwkLog’ by updating the columns ‘PipelineStatus’ to ‘Success’.",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "DT_RunPreTransformationNotebook",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[spu_FwkLogUpdate]",
+								"storedProcedureParameters": {
+									"ModuleRunId": {
+										"value": {
+											"value": "@concat(pipeline().RunId, '-pre')",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"PipelineStatus": {
+										"value": {
+											"value": "Failed",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"JobRunUrl": {
+										"value": {
+											"value": "@activity('DT_RunPreTransformationNotebook').output.runPageUrl",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_configurationDB",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "sp_FwkLogInsert_PreTrasnformation",
+							"description": "Executes the SP spi_FwkLogInsert to insert record into FwkLog table with the execution module information by pipeline id and with null status.",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[spi_FwkLogInsert]",
+								"storedProcedureParameters": {
+									"EntRunId": {
+										"value": {
+											"value": "@pipeline().parameters.EntRunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Module": {
+										"value": {
+											"value": "@concat('Transformation > ', \n    pipeline().parameters.LayerItem['FwkLayerId'], \n    ' Layer > PreTransformationNotebook'\n)",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"ModuleRunId": {
+										"value": {
+											"value": "@concat(pipeline().RunId, '-pre')",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"StartDate": {
+										"value": {
+											"value": "@formatdatetime(pipeline().TriggerTime)",
+											"type": "Expression"
+										},
+										"type": "DateTime"
+									},
+									"ADFTriggerName": {
+										"value": {
+											"value": "@pipeline().parameters.ADFTriggerName",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_configurationDB",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "setPreTransformationNotebookOutput",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "sp_UpdatePreTrasnformationLog_succeeded",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "varPreTransformationNotebookOutput",
+								"value": {
+									"value": "@string(activity('DT_RunPreTransformationNotebook').output)",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "sp_UpdatePreTransformationExecutionLog_failed",
+				"description": "Executes the SP spu_FwkLogUpdate to update the record created by the ‘InsertIntoFwkLog’ activity in the table ‘FwkLog’ by updating the columns ‘PipelineStatus’ to ‘Success’.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "If PreTransformationNotebookRun",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spu_FwkLogUpdate]",
+					"storedProcedureParameters": {
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStatus": {
+							"value": {
+								"value": "Failed",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"JobRunUrl": {
+							"value": null,
+							"type": "String"
+						},
+						"ErrorMessage": {
+							"value": null,
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "IfStopETL",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "IfWorkflowDefined",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@if(contains(json(variables('varPreTransformationNotebookOutput')), 'runOutput'),\n\tif(contains(json(variables('varPreTransformationNotebookOutput')).runOutput, 'stopETL'), \n\t\tjson(variables('varPreTransformationNotebookOutput')).runOutput['stopETL'], \n\t\t'false'\n\t),\n'false')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Execute ProcessTransformation",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_TRN_04_ProcessLayer",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"LayerItem": {
+										"value": "@pipeline().parameters.LayerItem",
+										"type": "Expression"
+									},
+									"EntRunId": {
+										"value": "@pipeline().parameters.EntRunId",
+										"type": "Expression"
+									},
+									"EntTriggerTime": {
+										"value": "@pipeline().parameters.EntTriggerTime",
+										"type": "Expression"
+									},
+									"FwkTriggerId": {
+										"value": "@pipeline().parameters.FwkTriggerId",
+										"type": "Expression"
+									},
+									"DtOrderItem": {
+										"value": "@pipeline().parameters.DtOrderItem",
+										"type": "Expression"
+									},
+									"ModuleRunId": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"ADFTriggerName": {
+										"value": "@pipeline().parameters.ADFTriggerName",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "setOutputStopETLResult",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Execute ProcessTransformation",
+									"dependencyConditions": [
+										"Completed"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "pipelineReturnValue",
+								"value": [
+									{
+										"key": "outputStopETL",
+										"value": {
+											"type": "Expression",
+											"content": "@activity('Execute ProcessTransformation').output.pipelineReturnValue['outputStopETL']"
+										}
+									}
+								],
+								"setSystemVariable": true
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "sp_UpdatePreIngestionExecutionLog_stopped",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[spu_FwkLogUpdate]",
+								"storedProcedureParameters": {
+									"ErrorMessage": {
+										"value": null,
+										"type": "String"
+									},
+									"JobRunUrl": {
+										"value": null,
+										"type": "String"
+									},
+									"ModuleRunId": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"PipelineStatus": {
+										"value": {
+											"value": "Stopped - Request from PreTransformationNotebook",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_configurationDB",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "setOutputStopETLTrue",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "sp_UpdatePreIngestionExecutionLog_stopped",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "pipelineReturnValue",
+								"value": [
+									{
+										"key": "outputStopETL",
+										"value": {
+											"type": "Boolean",
+											"content": true
+										}
+									}
+								],
+								"setSystemVariable": true
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "IfWorkflowDefined",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "If PreTransformationNotebookRun",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@if(contains(json(variables('varPreTransformationNotebookOutput')), 'runOutput'),\n\tif(contains(json(variables('varPreTransformationNotebookOutput')).runOutput, 'workflow'),\n\t\tcontains(string(json(variables('varPreTransformationNotebookOutput')).runOutput), 'WorkflowId'),\n\t\t'false'\n\t),\n'false')",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Execute PL_TriggerWorkflow",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_TriggerWorkflow",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Workflow": {
+										"value": "@json(variables('varPreTransformationNotebookOutput')).runOutput['workflow']",
+										"type": "Expression"
+									},
+									"EntRunId": {
+										"value": "@pipeline().parameters.EntRunId",
+										"type": "Expression"
+									},
+									"Module": {
+										"value": "@concat('Transformation > ',\n    pipeline().parameters.LayerItem['FwkLayerId'], ' Layer'\n)",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "sp_UpdateWorkflowExecutionLog_failed",
+				"description": "Executes the SP spu_FwkLogUpdate to update the record created by the ‘InsertIntoFwkLog’ activity in the table ‘FwkLog’ by updating the columns ‘PipelineStatus’ to ‘Success’.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "IfWorkflowDefined",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spu_FwkLogUpdate]",
+					"storedProcedureParameters": {
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStatus": {
+							"value": {
+								"value": "Failed",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"JobRunUrl": {
+							"value": null,
+							"type": "String"
+						},
+						"ErrorMessage": {
+							"value": null,
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "setOutputStopOnFailure",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "sp_UpdatePreTransformationExecutionLog_failed",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "pipelineReturnValue",
+					"value": [
+						{
+							"key": "outputStopETL",
+							"value": {
+								"type": "Boolean",
+								"content": true
+							}
+						}
+					],
+					"setSystemVariable": true
+				}
+			},
+			{
+				"name": "setOutputStopOnFailureWorkflowFailure",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "sp_UpdateWorkflowExecutionLog_failed",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "pipelineReturnValue",
+					"value": [
+						{
+							"key": "outputStopETL",
+							"value": {
+								"type": "Boolean",
+								"content": true
+							}
+						}
+					],
+					"setSystemVariable": true
+				}
+			}
+		],
+		"parameters": {
+			"LayerItem": {
+				"type": "array"
+			},
+			"EntRunId": {
+				"type": "string"
+			},
+			"EntTriggerTime": {
+				"type": "string"
+			},
+			"FwkTriggerId": {
+				"type": "string"
+			},
+			"DtOrderItem": {
+				"type": "array"
+			},
+			"ADFTriggerName": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"varPreTransformationNotebookOutput": {
+				"type": "String",
+				"defaultValue": "{}"
+			}
+		},
+		"folder": {
+			"name": "02 Transformation Module"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-07-06T08:29:15Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,30 @@
+name: SecHub scan
+
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'adf/**'
+      - 'dx/**'
+      - '!adf/package.json'
+      - '!adf/publish_config.json'
+      - '!dx/sechub.json'
+      
+jobs:
+  sechub-scan:
+    runs-on: azure-runners
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
+      - name: Scan Sechub
+        uses: action/sechub/scan@main
+        with:
+          url: ${{ secrets.SECHUB_SERVER }}
+          user: ${{ secrets.SECHUB_USERID }}
+          api-token: ${{ secrets.SECHUB_APITOKEN }}
+          project-name: "spire_platform_1-0"
+          config-path: "sechub.json"
+          report-formats: "html,json"
+          fail-job-with-findings: true

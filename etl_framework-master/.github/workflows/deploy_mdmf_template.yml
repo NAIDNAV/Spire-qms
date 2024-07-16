@@ -1,0 +1,331 @@
+# This workflow file is template to deploy the MoBi Artifacts from JFrog Artifactory to required environment.
+name: DeployMDMFArtifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment_var:
+        description: 'Environment'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+      version:
+        description: 'Version'
+        required: true
+        default: 'v0.1.0'
+        type: string
+
+env:
+  
+  DOTNET_INSTALL_DIR: "runner/dotnet"
+  JFrog_URL: "https://artifacts.i.mercedes-benz.com"
+  ARTIFACTORY_NAME: "spire-generic-local"
+  
+  # Fill in all the TODOs in this workflow file once and execute the file
+  # Environment variables for Databricks deployments
+  DATABRICKS_HOST_DEV: # TODO: Enter the DEV databricks host URL
+  DATABRICKS_HOST_INT: # TODO: Enter the INT databricks host URL
+  DATABRICKS_HOST_PRD: # TODO: Enter the PRD databricks host URL
+  
+  # TODO: Add the databricks token to the repository secrets with names as given below
+  DATABRICKS_TOKEN_DEV: ${{secrets.DATABRICKS_TOKEN_DEV}} 
+  DATABRICKS_TOKEN_INT: ${{secrets.DATABRICKS_TOKEN_INT}}
+  DATABRICKS_TOKEN_PRD: ${{secrets.DATABRICKS_TOKEN_PRD}}
+
+  
+  # Environment variables for SQL deployments
+  # TODO: Add the SQL Connection String to the repository secrets with name as given below
+  SQL_DB_CONNECTION_STRING_DEV: ${{secrets.SQL_DB_CONNECTION_STRING_DEV}}
+  SQL_DB_CONNECTION_STRING_INT: ${{secrets.SQL_DB_CONNECTION_STRING_INT}}
+  SQL_DB_CONNECTION_STRING_PRD: ${{secrets.SQL_DB_CONNECTION_STRING_PRD}}
+  
+  
+  
+  ADFNAME_DEV: # TODO: Add the ADF name of DEV env
+  ADFNAME_INT: # TODO: Add the ADF name of INT env
+  ADFNAME_PRD: # TODO: Add the ADF name of PRD env
+  
+  CLIENT_ID_DEV: ${{secrets.CLIENT_ID_DEV}} # TODO: Add the DEV client ID to repo secrets
+  CLIENT_SECRET_DEV: ${{secrets.CLIENT_SECRET_DEV}} # TODO: Add the DEV client secret to repo secrets
+  RESOURCEGROUP_DEV: # TODO: Add the resource group of the DEV environment
+  SUBSCRIPTIONID_DEV: # TODO: Add the subscription ID of DEV environment
+  
+  CLIENT_ID_INT: ${{secrets.CLIENT_ID_RDR_INT}} # TODO: Add the INT client ID to repo secrets
+  CLIENT_SECRET_INT: ${{secrets.CLIENT_SECRET_INT}} # TODO: Add the INT client secret to repo secrets
+  RESOURCEGROUP_INT: # TODO: Add the resource group of the INT environment
+  SUBSCRIPTIONID_INT: # TODO: Add the subscription ID of INT environment
+  
+  CLIENT_ID_PRD: ${{secrets.CLIENT_ID_RDR_PRD}} # TODO: Add the PRD client ID to repo secrets
+  CLIENT_SECRET_PRD: ${{secrets.CLIENT_SECRET_RDR_PRD}} # TODO: Add the PRD client secret to repo secrets
+  RESOURCEGROUP_PRD: # TODO: Add the resource group of the PRD environment
+  SUBSCRIPTIONID_PRD: # TODO: Add the subscription ID of PRD environment
+
+  TENANT_ID: ${{secrets.TENANT_ID}}
+
+  # Environment variables for overriding the armTemplate parameters wrt usecase environments
+  PL_TriggerCreation_properties_parameters_AzureRestApiUrl_defaultValue_DEV: # TODO: Add the value
+  PL_TriggerCreation_properties_parameters_AzureRestApiUrl_defaultValue_INT: # TODO: Add the value
+  PL_TriggerCreation_properties_parameters_AzureRestApiUrl_defaultValue_PRD: # TODO: Add the value
+
+  LS_databricks_properties_typeProperties_existingClusterId_DEV: # TODO: Add the value
+  LS_databricks_properties_typeProperties_existingClusterId_INT: # TODO: Add the value
+  LS_databricks_properties_typeProperties_existingClusterId_PRD: # TODO: Add the value
+
+  LS_keyvault_properties_typeProperties_baseUrl_DEV: # TODO: Add the value
+  LS_keyvault_properties_typeProperties_baseUrl_INT: # TODO: Add the value
+  LS_keyvault_properties_typeProperties_baseUrl_PRD: # TODO: Add the value
+
+  LS_databricks_properties_typeProperties_workspaceResourceId_DEV: # TODO: Add the value
+  LS_databricks_properties_typeProperties_workspaceResourceId_INT: # TODO: Add the value
+  LS_databricks_properties_typeProperties_workspaceResourceId_PRD: # TODO: Add the value
+
+  # TODO: Add the below values only if there is no shared runtime present in the ADF. If you decide to add it, uncomment in lines 251, 287, 323.
+  # SHIR_properties_typeProperties_linkedInfo_resourceId_DEV: # TODO: Add the value
+  # SHIR_properties_typeProperties_linkedInfo_resourceId_INT: # TODO: Add the value
+  # SHIR_properties_typeProperties_linkedInfo_resourceId_PRD: # TODO: Add the value
+
+jobs:
+  Download_Artifact_JFrog:
+    runs-on: [ azure-runners]
+    steps:
+      - name: Setup JFrog CLI
+        uses: jfrog/setup-jfrog-cli@v3.2.0
+        env:
+          JF_URL: ${{env.JFrog_URL}}
+          JF_USER: ${{secrets.JFROG_ARTIFACTORY_USER}}
+          JF_PASSWORD: ${{secrets.JFROG_ARTIFACTORY_API_KEY}}
+
+      - name: Download Artifacts from JFrog Artifactory
+        run: |
+          jf rt dl ${{env.ARTIFACTORY_NAME}}/mdmf/${{github.event.inputs.version}}/ ./
+      - name: Upload artifact locally
+        uses: actions/upload-artifact@v3.1.2
+        with:
+          name: Artifact_${{github.event.inputs.version}}
+          path: ./mdmf/${{github.event.inputs.version}}
+
+  DX_Deploy:
+    runs-on: [ azure-runners ]
+    needs: Download_Artifact_JFrog
+    steps:
+      - name: Download artifacts locally
+        uses: actions/download-artifact@v2.1.1
+        with:
+          name: Artifact_${{github.event.inputs.version}}
+          path: ./
+
+      - name: Untar the file
+        run: |
+          tar -xzf dx/notebooks.tar.gz
+          sudo mkdir resources
+      # Databricks deployment to development environment
+      - name: Deploy to DEV
+        if: ${{github.event.inputs.environment_var == 'development'}}
+        uses: dfs-dq-dl/action-deploy-databricks@v1
+        with:
+          databricks-host: ${{ env.DATABRICKS_HOST_DEV }}
+          databricks-token: ${{ env.DATABRICKS_TOKEN_DEV }}
+          notebooks-source-dir: ./notebooks/mdmf/
+          notebooks-target-dir: /Code/mdmf/
+
+      # Databricks deployment to staging environment
+      - name: Deploy to INT
+        if: ${{github.event.inputs.environment_var == 'staging'}}
+        uses: dfs-dq-dl/action-deploy-databricks@v1
+        with:
+          databricks-host: ${{ env.DATABRICKS_HOST_INT }}
+          databricks-token: ${{ env.DATABRICKS_TOKEN_INT }}
+          notebooks-source-dir: ./notebooks/mdmf/
+          notebooks-target-dir: /Code/mdmf/
+
+      # Databricks deployment to production environment
+      - name: Deploy to PRD
+        if: ${{github.event.inputs.environment_var == 'production'}}
+        uses: dfs-dq-dl/action-deploy-databricks@v1
+        with:
+          databricks-host: ${{ env.DATABRICKS_HOST_PRD }}
+          databricks-token: ${{ env.DATABRICKS_TOKEN_PRD }}
+          notebooks-source-dir: ./notebooks/mdmf/
+          notebooks-target-dir: /Code/mdmf/
+
+  DB_Deploy:
+    runs-on: [ azure-runners ]
+    needs: Download_Artifact_JFrog
+    steps:
+      - name: Download artifacts locally
+        uses: actions/download-artifact@v2.1.1
+        with:
+          name: Artifact_${{github.event.inputs.version}}
+          path: ./
+
+      - name: Setup DOTNET Core SDK
+        uses: actions/setup-dotnet@v3.0.3
+        with:
+          dotnet-version: '6.0'
+
+      - name: Install SQLPackage
+        run: dotnet tool install -g microsoft.sqlpackage
+
+      # SQL deployment to development environment
+      - name: Azure DEV LogIn
+        if: ${{github.event.inputs.environment_var == 'development'}}
+        uses: azure/actions/login@v1
+        with:
+          creds: '{"clientId":"${{ env.CLIENT_ID_DEV }}","clientSecret":"${{ env.CLIENT_SECRET_DEV }}","subscriptionId":"${{ env.SUBSCRIPTIONID_DEV }}","tenantId":"${{ env.TENANT_ID }}"}'
+
+      - name: SQL DEV Deploy
+        if: ${{github.event.inputs.environment_var == 'development'}}
+        run: /home/runner/.dotnet/tools/sqlpackage /Action:Publish /SourceFile:"./sql/mdmf_db.dacpac" /TargetConnectionString:"${{ env.SQL_DB_CONNECTION_STRING_DEV }}" /p:BlockOnPossibleDataLoss=false /p:GenerateSmartDefaults=true
+
+      # SQL deployment to staging environment
+      - name: Azure INT LogIn
+        if: ${{github.event.inputs.environment_var == 'staging'}}
+        uses: azure/actions/login@v1
+        with:
+          creds: '{"clientId":"${{ env.CLIENT_ID_INT }}","clientSecret":"${{ env.CLIENT_SECRET_INT }}","subscriptionId":"${{ env.SUBSCRIPTIONID_INT }}","tenantId":"${{ env.TENANT_ID }}"}'
+
+      - name: SQL INT Deploy
+        if: ${{github.event.inputs.environment_var == 'staging'}}
+        run: /home/runner/.dotnet/tools/sqlpackage /Action:Publish /SourceFile:"./sql/mdmf_db.dacpac" /TargetConnectionString:"${{ env.SQL_DB_CONNECTION_STRING_INT }}" /p:BlockOnPossibleDataLoss=false /p:GenerateSmartDefaults=true
+
+      # SQL deployment to production environment
+      - name: Azure PRD LogIn
+        if: ${{github.event.inputs.environment_var == 'production'}}
+        uses: azure/actions/login@v1
+        with:
+          creds: '{"clientId":"${{ env.CLIENT_ID_PRD }}","clientSecret":"${{ env.CLIENT_SECRET_PRD }}","subscriptionId":"${{ env.SUBSCRIPTIONID_PRD }}","tenantId":"${{ env.TENANT_ID }}"}'
+
+      - name: SQL PRD Deploy
+        if: ${{github.event.inputs.environment_var == 'production'}}
+        run: /home/runner/.dotnet/tools/sqlpackage /Action:Publish /SourceFile:"./sql/mdmf_db.dacpac" /TargetConnectionString:"${{ env.SQL_DB_CONNECTION_STRING_PRD }}" /p:BlockOnPossibleDataLoss=false /p:GenerateSmartDefaults=true
+
+  ADF_Deploy:
+    runs-on: [ azure-runners ]
+    needs: Download_Artifact_JFrog
+
+    steps:
+      - name: Download artifacts locally
+        uses: actions/download-artifact@v2.1.1
+        with:
+          name: Artifact_${{github.event.inputs.version}}
+          path: ./
+
+      - name: Untar
+        run: |
+          tar -xzf adf/adf_artifact.tar.gz
+      - name: Az Powershell Setup
+        shell: pwsh
+        run: |
+          Set-PSRepository PSGallery -InstallationPolicy Trusted          
+          Install-Module Az
+      # ADF deployment to development environment    
+      - name: Azure login DEV
+        if: ${{github.event.inputs.environment_var == 'development'}}
+        uses: azure/login@v1
+        with:
+          creds: '{"clientId":"${{ env.CLIENT_ID_DEV }}","clientSecret":"${{ env.CLIENT_SECRET_DEV }}","subscriptionId":"${{ env.SUBSCRIPTIONID_DEV }}","tenantId":"${{ env.TENANT_ID }}"}'
+          enable-AzPSSession: true
+
+      - name: PreDeploymentScriptDEV
+        if: ${{github.event.inputs.environment_var == 'development'}}
+        uses: azure/powershell@v1
+        with:
+          inlineScript: |
+            .\PrePostDeploymentScript.ps1 -armTemplate './armTemplate/ARMTemplateForFactory.json' -ResourceGroupName "${{env.RESOURCEGROUP_DEV}}" -DataFactoryName "${{env.ADFNAME_DEV}}" -predeployment $true -isProduction no
+          azPSVersion: 'latest'
+          errorActionPreference: Continue
+
+      - name: Deploy on Dev
+        if: ${{github.event.inputs.environment_var == 'development'}}
+        uses: azure/arm-deploy@v1
+        with:
+          subscriptionId: "${{env.SUBSCRIPTIONID_DEV}}"
+          resourceGroupName: "${{env.RESOURCEGROUP_DEV}}"
+          deploymentMode: Incremental
+          deploymentName: ADFDeploy
+          template: ./armTemplate/ARMTemplateForFactory.json
+          parameters: ./armTemplate/ARMTemplateParametersForFactory.json factoryName="${{env.ADFNAME_DEV}}" PL_TriggerCreation_properties_parameters_AzureRestApiUrl_defaultValue="${{env.PL_TriggerCreation_properties_parameters_AzureRestApiUrl_defaultValue_DEV}}" LS_databricks_properties_typeProperties_domain="${{env.DATABRICKS_HOST_DEV}}" LS_databricks_properties_typeProperties_existingClusterId="${{env.LS_databricks_properties_typeProperties_existingClusterId_DEV}}" LS_keyvault_properties_typeProperties_baseUrl="${{env.LS_keyvault_properties_typeProperties_baseUrl_DEV}}" LS_databricks_properties_typeProperties_workspaceResourceId="${{env.LS_databricks_properties_typeProperties_workspaceResourceId_DEV}}" #SHIR_properties_typeProperties_linkedInfo_resourceId=${{SHIR_properties_typeProperties_linkedInfo_resourceId_DEV}}
+    
+        
+      - name: PostDeploymentScriptDEV
+        if: ${{github.event.inputs.environment_var == 'development'}}
+        uses: azure/powershell@v1
+        with:
+          inlineScript: |
+            ./PrePostDeploymentScript.ps1 -armTemplate './armTemplate/ARMTemplateForFactory.json' -ResourceGroupName "${{env.RESOURCEGROUP_DEV}}" -DataFactoryName "${{env.ADFNAME_DEV}}" -predeployment $false -isProduction no
+          azPSVersion: 'latest'
+
+      # ADF deployment to staging environment
+      - name: Azure login INT
+        if: ${{github.event.inputs.environment_var == 'staging'}}
+        uses: azure/login@v1
+        with:
+          creds: '{"clientId":"${{ env.CLIENT_ID_INT }}","clientSecret":"${{ env.CLIENT_SECRET_INT }}","subscriptionId":"${{ env.SUBSCRIPTIONID_INT }}","tenantId":"${{ env.TENANT_ID }}"}'
+          enable-AzPSSession: true 
+          
+      - name: PreDeploymentScriptINT
+        if: ${{github.event.inputs.environment_var == 'staging'}}
+        uses: azure/powershell@v1
+        with:
+          inlineScript: |
+            ./PrePostDeploymentScript.ps1 -armTemplate './armTemplate/ARMTemplateForFactory.json' -ResourceGroupName "${{env.RESOURCEGROUP_INT}}" -DataFactoryName "${{env.ADFNAME_INT}}" -predeployment $true -isProduction no
+          azPSVersion: 'latest'
+        
+      - name: Deploy on INT
+        if: ${{github.event.inputs.environment_var == 'staging'}}
+        uses: azure/arm-deploy@v1
+        with:
+          subscriptionId: "${{env.SUBSCRIPTIONID_INT}}"
+          resourceGroupName: "${{env.RESOURCEGROUP_INT}}"
+          deploymentMode: Incremental
+          deploymentName: ADFDeploy
+          template: ./armTemplate/ARMTemplateForFactory.json
+          parameters: ./armTemplate/ARMTemplateParametersForFactory.json factoryName="${{env.ADFNAME_INT}}" PL_TriggerCreation_properties_parameters_AzureRestApiUrl_defaultValue="${{env.PL_TriggerCreation_properties_parameters_AzureRestApiUrl_defaultValue_INT}}" LS_databricks_properties_typeProperties_domain="${{env.DATABRICKS_HOST_INT}}" LS_databricks_properties_typeProperties_existingClusterId="${{env.LS_databricks_properties_typeProperties_existingClusterId_INT}}" LS_keyvault_properties_typeProperties_baseUrl="${{env.LS_keyvault_properties_typeProperties_baseUrl_INT}}" LS_databricks_properties_typeProperties_workspaceResourceId="${{env.LS_databricks_properties_typeProperties_workspaceResourceId_INT}}" #SHIR_properties_typeProperties_linkedInfo_resourceId=${{SHIR_properties_typeProperties_linkedInfo_resourceId_INT}}
+    
+       
+      - name: PostDeploymentScriptINT
+        if: ${{github.event.inputs.environment_var == 'staging'}}
+        uses: azure/powershell@v1
+        with:
+          inlineScript: |
+            ./PrePostDeploymentScript.ps1 -armTemplate './armTemplate/ARMTemplateForFactory.json' -ResourceGroupName "${{env.RESOURCEGROUP_INT}}" -DataFactoryName "${{env.ADFNAME_INT}}" -predeployment $false -isProduction no
+          azPSVersion: 'latest'
+
+      # ADF deployment to production environment
+      - name: Azure login PRD
+        if: ${{github.event.inputs.environment_var == 'production'}}
+        uses: azure/login@v1
+        with:
+          creds: '{"clientId":"${{ env.CLIENT_ID_PRD }}","clientSecret":"${{ env.CLIENT_SECRET_PRD }}","subscriptionId":"${{ env.SUBSCRIPTIONID_PRD }}","tenantId":"${{ env.TENANT_ID }}"}'
+          enable-AzPSSession: true
+          
+      - name: PreDeploymentScriptPRD
+        if: ${{github.event.inputs.environment_var == 'production'}}
+        uses: azure/powershell@v1
+        with:
+          inlineScript: |
+            ./PrePostDeploymentScript.ps1 -armTemplate './armTemplate/ARMTemplateForFactory.json' -ResourceGroupName "${{env.RESOURCEGROUP_PRD}}" -DataFactoryName "${{env.ADFNAME_PRD}}" -predeployment $true -isProduction yes
+          azPSVersion: 'latest' 
+        
+      - name: Deploy on PRD
+        if: ${{github.event.inputs.environment_var == 'production'}}
+        uses: azure/arm-deploy@v1
+        with:
+          subscriptionId: "${{env.SUBSCRIPTIONID_PRD}}"
+          resourceGroupName: "${{env.RESOURCEGROUP_PRD}}"
+          deploymentMode: Incremental
+          deploymentName: ADFDeploy
+          template: ./armTemplate/ARMTemplateForFactory.json
+          parameters: ./armTemplate/ARMTemplateParametersForFactory.json factoryName="${{env.ADFNAME_PRD}}" PL_TriggerCreation_properties_parameters_AzureRestApiUrl_defaultValue="${{env.PL_TriggerCreation_properties_parameters_AzureRestApiUrl_defaultValue_PRD}}" LS_databricks_properties_typeProperties_domain="${{env.DATABRICKS_HOST_PRD}}" LS_databricks_properties_typeProperties_existingClusterId="${{env.LS_databricks_properties_typeProperties_existingClusterId_PRD}}" LS_keyvault_properties_typeProperties_baseUrl="${{env.LS_keyvault_properties_typeProperties_baseUrl_PRD}}" LS_databricks_properties_typeProperties_workspaceResourceId="${{env.LS_databricks_properties_typeProperties_workspaceResourceId_PRD}}" #SHIR_properties_typeProperties_linkedInfo_resourceId=${{SHIR_properties_typeProperties_linkedInfo_resourceId_PRD}}
+          
+      - name: PostDeploymentScriptPRD
+        if: ${{github.event.inputs.environment_var == 'production'}}
+        uses: azure/powershell@v1
+        with:
+          inlineScript: |
+            ./PrePostDeploymentScript.ps1 -armTemplate './armTemplate/ARMTemplateForFactory.json' -ResourceGroupName "${{env.RESOURCEGROUP_PRD}}" -DataFactoryName "${{env.ADFNAME_PRD}}" -predeployment $false -isProduction yes
+          azPSVersion: 'latest'

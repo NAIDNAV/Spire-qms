@@ -1,0 +1,10 @@
+[
+    {
+        "Entity": "DAT_CreditScoreBE",
+        "Stereotype": ""
+    },
+    {
+        "Entity": "DAT_CreditScoreNL",
+        "Stereotype": ""
+    }
+]

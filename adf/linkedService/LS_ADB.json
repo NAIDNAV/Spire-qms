@@ -1,0 +1,12 @@
+{
+	"name": "LS_ADB",
+	"properties": {
+		"annotations": [],
+		"type": "AzureDatabricksDeltaLake",
+		"typeProperties": {
+			"domain": "https://adb-8731781706562404.4.azuredatabricks.net",
+			"clusterId": "0214-064848-zi0j9fjh",
+			"workspaceResourceId": "/subscriptions/775f9e05-bbee-446a-aa43-3d2296410d19/resourceGroups/0001-d-cpmef/providers/Microsoft.Databricks/workspaces/ddxcpmef"
+		}
+	}
+}

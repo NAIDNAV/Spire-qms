@@ -1,0 +1,16 @@
+[
+    {
+        "Parent": "dimCustomer",
+        "ParentAttribute": "WK_Customer_Identifier",
+        "Child": "factCustomerSales",
+        "ChildAttribute": "WK_Customer_Identifier",
+        "KeyType": "PIdentifier"
+    },
+    {
+        "Parent": "dimCustomer",
+        "ParentAttribute": "CustomerID",
+        "Child": "factCustomerSales",
+        "ChildAttribute": "CustomerID",
+        "KeyType": "RefIdentifier"
+    }
+]

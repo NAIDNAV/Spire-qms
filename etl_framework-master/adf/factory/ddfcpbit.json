@@ -1,0 +1,9 @@
+{
+	"name": "ddfcpbit",
+	"location": "westeurope",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "2e74a55d-0643-4f8f-a987-22d66c4ba2a5",
+		"tenantId": "9652d7c2-1ccf-4940-8151-4a92bd474ed0"
+	}
+}

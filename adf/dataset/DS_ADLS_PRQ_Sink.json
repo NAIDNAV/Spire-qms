@@ -1,0 +1,44 @@
+{
+	"name": "DS_ADLS_PRQ_Sink",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_adls",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"InstanceURL": {
+					"value": "@dataset().InstanceURL",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"InstanceURL": {
+				"type": "string"
+			},
+			"FullPath": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "01 Ingestion Module DS"
+		},
+		"annotations": [],
+		"type": "Parquet",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@replace(concat('$', dataset().FullPath), concat('$', split(dataset().FullPath, '/')[0], '/'), '')",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "@split(dataset().FullPath, '/')[0]",
+					"type": "Expression"
+				}
+			},
+			"compressionCodec": "snappy"
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

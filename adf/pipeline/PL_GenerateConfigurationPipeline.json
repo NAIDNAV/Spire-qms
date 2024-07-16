@@ -1,0 +1,483 @@
+{
+	"name": "PL_GenerateConfigurationPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "Execute Ingestion Module",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "If config generation type",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "PL_ING_01_02_PreProcessIngestion",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"EntRunId": {
+							"value": "@pipeline().RunId",
+							"type": "Expression"
+						},
+						"EntTriggerTime": {
+							"value": "@pipeline().TriggerTime",
+							"type": "Expression"
+						},
+						"FwkTriggerId": "Deployment",
+						"ADFTriggerName": "Deployment"
+					}
+				}
+			},
+			{
+				"name": "Execute ETL Config Generator Module",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Execute Ingestion Module",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "PL_COG_01_GenerateConfig",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"EntRunId": {
+							"value": "@pipeline().RunId",
+							"type": "Expression"
+						},
+						"NotebookName": "etlConfigGenerator",
+						"GenerateConfigParameter": {
+							"value": "@pipeline().parameters.GenerateConfigParameter",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Log Metadata Ingestion Failure To Mattermost",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Execute Ingestion Module",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "PL_LogToMattermost",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"Message": "Execution of pipeline 'PL_ING_01_ProcessIngestion' responsible for ingesting metadata has failed",
+						"EntRunId": {
+							"value": "@pipeline().RunId",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Log ETL Metadata Execution Failure To Mattermost",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Execute ETL Config Generator Module",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "PL_LogToMattermost",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"Message": "Execution of pipeline 'PL_COG_01_GenerateConfig' responsible for generating ETL configuration has failed",
+						"EntRunId": {
+							"value": "@pipeline().RunId",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "If config generation type",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "If validate configuration",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(pipeline().parameters.GenerateConfigParameter, 'Partial')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Execute Metadata Ingestion Config Generator",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_COG_01_GenerateConfig",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"EntRunId": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"NotebookName": "preEtlConfigGenerator",
+									"GenerateConfigParameter": {
+										"value": "@pipeline().parameters.GenerateConfigParameter",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Log PreETL Metadata Execution Failure To Mattermost",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "If config generation type",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "PL_LogToMattermost",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"Message": "Execution of pipeline 'PL_COG_01_GenerateConfig' responsible for generating pre-ETL configuration has failed",
+						"EntRunId": {
+							"value": "@pipeline().RunId",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "setFailedStatus1",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Log PreETL Metadata Execution Failure To Mattermost",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "pipelineReturnValue",
+					"value": [
+						{
+							"key": "isSuccessful",
+							"value": {
+								"type": "Boolean",
+								"content": false
+							}
+						}
+					],
+					"setSystemVariable": true
+				}
+			},
+			{
+				"name": "setFailedStatus2",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Log Metadata Ingestion Failure To Mattermost",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "pipelineReturnValue",
+					"value": [
+						{
+							"key": "isSuccessful",
+							"value": {
+								"type": "Boolean",
+								"content": false
+							}
+						}
+					],
+					"setSystemVariable": true
+				}
+			},
+			{
+				"name": "setFailedStatus3",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Log ETL Metadata Execution Failure To Mattermost",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "pipelineReturnValue",
+					"value": [
+						{
+							"key": "isSuccessful",
+							"value": {
+								"type": "Boolean",
+								"content": false
+							}
+						}
+					],
+					"setSystemVariable": true
+				}
+			},
+			{
+				"name": "setSuccessfulStatus",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Execute ETL Config Generator Module",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "pipelineReturnValue",
+					"value": [
+						{
+							"key": "isSuccessful",
+							"value": {
+								"type": "Boolean",
+								"content": true
+							}
+						}
+					],
+					"setSystemVariable": true
+				}
+			},
+			{
+				"name": "If validate configuration",
+				"type": "IfCondition",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@pipeline().parameters.ValidateConfiguration",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "DT_RunValidationNotebook",
+							"type": "DatabricksNotebook",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": "/Code/mdmf/tests/configurationTests/allFilesValidator",
+								"baseParameters": {
+									"FwkLogParameters": {
+										"value": "@concat(\n    '{\"EntRunId\":','\"',pipeline().RunId,'\",\"Module\":\"Config Generation - validation\",\"ModuleRunId\":\"',pipeline().RunId,'\",\"StartDate\":\"',formatdatetime(pipeline().TriggerTime),'\",\"AdfTriggerName\":\"None\"}'\n    )",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_databricks",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"ClusterId": "0214-064848-zi0j9fjh"
+								}
+							}
+						},
+						{
+							"name": "UpdateNotebookExecutionLog",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "DT_RunValidationNotebook",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureDatabricksDeltaLakeSource",
+									"query": {
+										"value": "@concat(\n    'UPDATE ', pipeline().globalParameters.MetadataDB, '.FwkLog ',\n    'SET PipelineStatus = ''Failed''',\n    'EndDate = ''', formatDateTime(utcnow()), '''',\n    ' LastUpdate = ''', formatDateTime(utcnow()), '''',\n    ' JobRunUrl = ''', activity('DT_RunValidationNotebook').output.runPageUrl, '''',\n    ' ErrorMessage = ''', activity('DT_RunValidationNotebook').output.errors[0].Message, '''',\n    ' WHERE ModuleRunId = ''', pipeline().RunId, '''' \n)",
+										"type": "Expression"
+									}
+								},
+								"dataset": {
+									"referenceName": "DS_ADB_Delta",
+									"type": "DatasetReference"
+								},
+								"firstRowOnly": false
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Log Validate Configuration Failure To Mattermost",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "If validate configuration",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "PL_LogToMattermost",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"Message": "Execution of pipeline 'PL_GenerateConfigurationPipeline' has failed because validation of configuration was not successful",
+						"EntRunId": {
+							"value": "@pipeline().RunId",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "setFailedStatus0",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Log Validate Configuration Failure To Mattermost",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "pipelineReturnValue",
+					"value": [
+						{
+							"key": "isSuccessful",
+							"value": {
+								"type": "Boolean",
+								"content": false
+							}
+						}
+					],
+					"setSystemVariable": true
+				}
+			}
+		],
+		"parameters": {
+			"GenerateConfigParameter": {
+				"type": "string"
+			},
+			"ValidateConfiguration": {
+				"type": "bool",
+				"defaultValue": true
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-07-06T08:29:21Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

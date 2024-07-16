@@ -1,0 +1,180 @@
+{
+	"name": "PL_ING_07_02_ADLSIngestAllExcelFiles",
+	"properties": {
+		"activities": [
+			{
+				"name": "ForEach Excel file",
+				"type": "ForEach",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FileNames",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Execute ADLSExcelLoad",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "spi_IngtLogInsert",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_ING_07_02_ADLSExcelLoad",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"FwkItem": {
+										"value": "@pipeline().parameters.FwkItem",
+										"type": "Expression"
+									},
+									"EntRunId": {
+										"value": "@pipeline().parameters.EntRunId",
+										"type": "Expression"
+									},
+									"ModuleRunId": {
+										"value": "@pipeline().parameters.ModuleRunId",
+										"type": "Expression"
+									},
+									"FileName": {
+										"value": "@item().name",
+										"type": "Expression"
+									},
+									"FilePath": {
+										"value": "@pipeline().parameters.FilePath",
+										"type": "Expression"
+									},
+									"PL_01TriggerTime": {
+										"value": "@pipeline().parameters.PL_01TriggerTime",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "spi_IngtLogInsert",
+							"description": "Executes the SP spi_IngtLogInsert to insert record into IngtLog table with the execution module information.",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[spi_IngtLogInsert]",
+								"storedProcedureParameters": {
+									"IngtOutputId": {
+										"value": {
+											"value": "@pipeline().parameters.FwkItem['IngtOutputId']",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"EntRunId": {
+										"value": {
+											"value": "@pipeline().parameters.EntRunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"ModuleRunId": {
+										"value": {
+											"value": "@pipeline().parameters.ModuleRunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"PipelineStatus": {
+										"value": {
+											"value": "InProgress",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"StartDate": {
+										"value": {
+											"value": "@formatdatetime(pipeline().TriggerTime)",
+											"type": "Expression"
+										},
+										"type": "Datetime"
+									},
+									"RowsRead": {
+										"value": null,
+										"type": "Int64"
+									},
+									"RowsCopied": {
+										"value": null,
+										"type": "Int64"
+									},
+									"CopyDuration": {
+										"value": null,
+										"type": "Double"
+									},
+									"Throughput": {
+										"value": null,
+										"type": "Double"
+									},
+									"ErrorMessage": {
+										"value": null,
+										"type": "String"
+									},
+									"FileName": {
+										"value": {
+											"value": "@if(contains(pipeline().parameters.FwkItem['Path'], '*'), item().name, null)",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_configurationDB",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"FileNames": {
+				"type": "array"
+			},
+			"FwkItem": {
+				"type": "array"
+			},
+			"EntRunId": {
+				"type": "string"
+			},
+			"ModuleRunId": {
+				"type": "string"
+			},
+			"FilePath": {
+				"type": "string"
+			},
+			"PL_01TriggerTime": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "01 Ingestion Module/07 ADLS"
+		},
+		"annotations": []
+	}
+}

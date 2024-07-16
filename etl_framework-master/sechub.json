@@ -1,0 +1,23 @@
+{
+  "apiVersion": "1.0",
+  "codeScan": {
+    "use": [
+      "sechub-sources"
+    ]
+  },
+  "data": {
+    "sources": [
+      {
+        "name": "sechub-sources",
+        "fileSystem": {
+          "folders": [
+            "."
+          ]
+        },
+        "excludes": [
+          "**/tests/**"
+        ]
+      }
+    ]
+  }
+}

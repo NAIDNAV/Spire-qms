@@ -1,0 +1,20 @@
+{
+	"name": "LS_databricks",
+	"properties": {
+		"parameters": {
+			"ClusterId": {
+				"type": "string",
+				"defaultValue": "0214-064848-zi0j9fjh"
+			}
+		},
+		"annotations": [],
+		"type": "AzureDatabricks",
+		"typeProperties": {
+			"domain": "https://adb-8731781706562404.4.azuredatabricks.net",
+			"authentication": "MSI",
+			"workspaceResourceId": "/subscriptions/775f9e05-bbee-446a-aa43-3d2296410d19/resourceGroups/0001-d-cpmef/providers/Microsoft.Databricks/workspaces/ddxcpmef",
+			"existingClusterId": "@linkedService().ClusterId"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/linkedservices"
+}

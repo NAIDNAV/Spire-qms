@@ -1,0 +1,184 @@
+{
+	"name": "PL_StartOrStopTrigger",
+	"properties": {
+		"activities": [
+			{
+				"name": "For each Trigger",
+				"type": "ForEach",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.TriggerNames",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Check RuntimeState vlaue is valid",
+							"type": "IfCondition",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@or(equals(pipeline().parameters.RuntimeState, 'Started'), equals(pipeline().parameters.RuntimeState, 'Stopped'))",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "Invalid RuntimeState in parameters",
+										"type": "Fail",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"message": "Invalid RuntimeState. Please choose \"Started\" or \"Stopped\".",
+											"errorCode": "500"
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "Switch STOP or START triggers",
+							"type": "Switch",
+							"dependsOn": [
+								{
+									"activity": "Check RuntimeState vlaue is valid",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"on": {
+									"value": "@pipeline().parameters.RuntimeState",
+									"type": "Expression"
+								},
+								"cases": [
+									{
+										"value": "Started",
+										"activities": [
+											{
+												"name": "Start Trigger",
+												"description": "This will start the scheduled triggers in the targeted ADF",
+												"type": "WebActivity",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"method": "POST",
+													"url": {
+														"value": "@concat(\n    pipeline().parameters.AzureRestApiUrl,\n    '/providers/Microsoft.DataFactory/factories/'\n    ,pipeline().DataFactory,\n    '/triggers/',\n    item(),\n    '/start?api-version=2018-06-01'\n    )",
+														"type": "Expression"
+													},
+													"body": {
+														"value": "{}",
+														"type": "Expression"
+													},
+													"authentication": {
+														"type": "MSI",
+														"resource": {
+															"value": "https://management.azure.com/",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									},
+									{
+										"value": "Stopped",
+										"activities": [
+											{
+												"name": "Stop Trigger",
+												"type": "WebActivity",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"method": "POST",
+													"url": {
+														"value": "@concat(\n    pipeline().parameters.AzureRestApiUrl,\n    '/providers/Microsoft.DataFactory/factories/'\n    ,pipeline().DataFactory,\n    '/triggers/',\n    item(),\n    '/stop?api-version=2018-06-01'\n    )",
+														"type": "Expression"
+													},
+													"body": {
+														"value": "{}",
+														"type": "Expression"
+													},
+													"authentication": {
+														"type": "MSI",
+														"resource": {
+															"value": "https://management.azure.com/",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									}
+								]
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"AzureRestApiUrl": {
+				"type": "string",
+				"defaultValue": "https://management.azure.com//subscriptions/775f9e05-bbee-446a-aa43-3d2296410d19/resourceGroups/0001-d-cpmef"
+			},
+			"TriggerNames": {
+				"type": "array"
+			},
+			"RuntimeState": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"ADFTriggers": {
+				"type": "Array",
+				"defaultValue": []
+			},
+			"IsNextLinkPresent": {
+				"type": "Boolean",
+				"defaultValue": true
+			},
+			"GetADFTriggersURL": {
+				"type": "String"
+			},
+			"ListADFTriggersTemp": {
+				"type": "Array"
+			},
+			"TriggerFoundFlag": {
+				"type": "Boolean",
+				"defaultValue": false
+			},
+			"IsRuntimeStateSame": {
+				"type": "Boolean",
+				"defaultValue": false
+			},
+			"DummyRunTimeState": {
+				"type": "String"
+			},
+			"Dummy2": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-07-06T08:29:13Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

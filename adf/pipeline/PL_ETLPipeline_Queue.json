@@ -1,0 +1,64 @@
+{
+	"name": "PL_ETLPipeline_Queue",
+	"properties": {
+		"activities": [
+			{
+				"name": "Execute ETL Pipeline",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "PL_ETLPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"EntRunId": {
+							"value": "@pipeline().RunId",
+							"type": "Expression"
+						},
+						"EntTriggerTime": {
+							"value": "@pipeline().TriggerTime",
+							"type": "Expression"
+						},
+						"FwkTriggerId": {
+							"value": "@pipeline().parameters.FwkTriggerId",
+							"type": "Expression"
+						},
+						"FwkLayerId": {
+							"value": "@pipeline().parameters.FwkLayerId",
+							"type": "Expression"
+						},
+						"ADFTriggerName": {
+							"value": "@if(\n    equals(pipeline().parameters.ADFTriggerName, 'none'),\n    pipeline().TriggerName,\n    pipeline().parameters.ADFTriggerName\n)",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"concurrency": 1,
+		"parameters": {
+			"EntRunId": {
+				"type": "string"
+			},
+			"EntTriggerTime": {
+				"type": "string"
+			},
+			"FwkTriggerId": {
+				"type": "string"
+			},
+			"FwkLayerId": {
+				"type": "string"
+			},
+			"ADFTriggerName": {
+				"type": "string"
+			}
+		},
+		"annotations": []
+	}
+}

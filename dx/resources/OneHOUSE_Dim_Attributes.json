@@ -1,0 +1,142 @@
+[
+    {
+        "Entity": "dimCustomer",
+        "Attribute": "WK_Customer_Identifier",
+        "DataType": "bigint",
+        "IsPrimaryKey": true,
+        "IsIdentity": true
+    },
+    {
+        "Entity": "dimCustomer",
+        "Attribute": "CustomerID",
+        "DataType": "int",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "dimCustomer",
+        "Attribute": "CompanyName",
+        "DataType": "varchar(128)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "dimCustomer",
+        "Attribute": "SalesPerson",
+        "DataType": "varchar(256)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "factCustomerSales",
+        "Attribute": "WK_SalesOrderHeader_Identifier",
+        "DataType": "bigint",
+        "IsPrimaryKey": true,
+        "IsIdentity": true
+    },
+    {
+        "Entity": "factCustomerSales",
+        "Attribute": "SalesOrderID",
+        "DataType": "int",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "factCustomerSales",
+        "Attribute": "RevisionNumber",
+        "DataType": "int",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "factCustomerSales",
+        "Attribute": "OrderDate",
+        "DataType": "datetime",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "factCustomerSales",
+        "Attribute": "DueDate",
+        "DataType": "datetime",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "factCustomerSales",
+        "Attribute": "ShipDate",
+        "DataType": "datetime",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "factCustomerSales",
+        "Attribute": "Status",
+        "DataType": "int",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "factCustomerSales",
+        "Attribute": "WK_Customer_Identifier",
+        "DataType": "bigint",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "factCustomerSales",
+        "Attribute": "CustomerID",
+        "DataType": "int",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "dimCustomerOracle",
+        "Attribute": "WK_DimCustomer_Identifier",
+        "DataType": "bigint",
+        "IsPrimaryKey": true,
+        "IsIdentity": true
+    },
+    {
+        "Entity": "dimCustomerOracle",
+        "Attribute": "CustomerKey",
+        "DataType": "bigint",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "dimCustomerOracle",
+        "Attribute": "Firstname",
+        "DataType": "varchar(128)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "dimCustomerOracle",
+        "Attribute": "Lastname",
+        "DataType": "varchar(256)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "dimCurrency",
+        "Attribute": "WK_DimCurrency_Identifier",
+        "DataType": "bigint",
+        "IsPrimaryKey": true,
+        "IsIdentity": true
+    },
+    {
+        "Entity": "dimCurrency",
+        "Attribute": "CurrencyKey",
+        "DataType": "bigint",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "dimCurrency",
+        "Attribute": "CurrencyName",
+        "DataType": "varchar(128)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    }
+]

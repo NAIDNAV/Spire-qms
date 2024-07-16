@@ -1,0 +1,698 @@
+{
+	"name": "PL_ING_01_04_ProcessBatches",
+	"properties": {
+		"activities": [
+			{
+				"name": "LookupIngtOutput",
+				"description": "Executes the SP ‘sps_LookupIngOutput’ to get the source and the sink information of the data to ingest.",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "sp_FwkLogInsert",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[dbo].[sps_LookupIngtOutput]",
+						"storedProcedureParameters": {
+							"BatchNumber": {
+								"type": "Int32",
+								"value": {
+									"value": "@pipeline().parameters.BatchItem['BatchNumber']\n",
+									"type": "Expression"
+								}
+							},
+							"FwkTriggerId": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.BatchItem['FwkTriggerId']",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "DS_SQL_Configuration",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ForEachObject",
+				"description": "Iterates over a dataset and loop by number of rows it gets with the output from ‘LookupIngOutput’ activity.",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "LookupIngtOutput",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@array(activity('LookupIngtOutput').output.value)",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 30,
+					"activities": [
+						{
+							"name": "Switch_SourceType",
+							"description": "Evaluates the input value ‘SourceType’ corresponding to a case that matches the condition.",
+							"type": "Switch",
+							"dependsOn": [
+								{
+									"activity": "DeleteLandingSinkFolder",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"on": {
+									"value": "@string(item().SourceType)",
+									"type": "Expression"
+								},
+								"cases": [
+									{
+										"value": "SQL",
+										"activities": [
+											{
+												"name": "Execute PL_ING_02_SQLLoad",
+												"description": "This pipeline is used to execute all the inner activities that are included in the ingestion module.",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"policy": {
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "PL_ING_02_SQLLoad",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"FwkItem": {
+															"value": "@item()",
+															"type": "Expression"
+														},
+														"PL_01TriggerTime": {
+															"value": "@pipeline().parameters.EntTriggerTime",
+															"type": "Expression"
+														},
+														"EntRunId": {
+															"value": "@pipeline().parameters.EntRunId",
+															"type": "Expression"
+														},
+														"ModuleRunId": {
+															"value": "@pipeline().RunId",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									},
+									{
+										"value": "Oracle",
+										"activities": [
+											{
+												"name": "Execute PL_ING_04_OracleLoad",
+												"description": "This pipeline is used to execute all the inner activities that are included in the ingestion module.",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"policy": {
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "PL_ING_04_OracleLoad",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"FwkItem": {
+															"value": "@item()",
+															"type": "Expression"
+														},
+														"PL_01TriggerTime": {
+															"value": "@pipeline().parameters.EntTriggerTime",
+															"type": "Expression"
+														},
+														"EntRunId": {
+															"value": "@pipeline().parameters.EntRunId",
+															"type": "Expression"
+														},
+														"ModuleRunId": {
+															"value": "@pipeline().RunId",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									},
+									{
+										"value": "FileShare",
+										"activities": [
+											{
+												"name": "Execute PL_ING_05_FileShareLoad",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"policy": {
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "PL_ING_05_FileShareLoad",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"FwkItem": {
+															"value": "@item()",
+															"type": "Expression"
+														},
+														"PL_01TriggerTime": {
+															"value": "@pipeline().parameters.EntTriggerTime",
+															"type": "Expression"
+														},
+														"EntRunId": {
+															"value": "@pipeline().parameters.EntRunId",
+															"type": "Expression"
+														},
+														"ModuleRunId": {
+															"value": "@pipeline().RunId",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									},
+									{
+										"value": "SQLOnPrem",
+										"activities": [
+											{
+												"name": "Execute PL_ING_03_SQLOnPremLoad",
+												"description": "This pipeline is used to execute all the inner activities that are included in the ingestion module.",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"policy": {
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "PL_ING_03_SQLOnPremLoad",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"FwkItem": {
+															"value": "@item()",
+															"type": "Expression"
+														},
+														"PL_01TriggerTime": {
+															"value": "@pipeline().parameters.EntTriggerTime",
+															"type": "Expression"
+														},
+														"EntRunId": {
+															"value": "@pipeline().parameters.EntRunId",
+															"type": "Expression"
+														},
+														"ModuleRunId": {
+															"value": "@pipeline().RunId",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									},
+									{
+										"value": "SFTP",
+										"activities": [
+											{
+												"name": "Execute PL_ING_06_SFTPLoad",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"policy": {
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "PL_ING_06_SFTPLoad",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"FwkItem": {
+															"value": "@item()",
+															"type": "Expression"
+														},
+														"PL_01TriggerTime": {
+															"value": "@pipeline().parameters.EntTriggerTime",
+															"type": "Expression"
+														},
+														"EntRunId": {
+															"value": "@pipeline().parameters.EntRunId",
+															"type": "Expression"
+														},
+														"ModuleRunId": {
+															"value": "@pipeline().RunId",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									},
+									{
+										"value": "ADLS",
+										"activities": [
+											{
+												"name": "Execute PL_ING_07_ADLSLoad",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"policy": {
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "PL_ING_07_ADLSLoad",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"FwkItem": {
+															"value": "@item()",
+															"type": "Expression"
+														},
+														"PL_01TriggerTime": {
+															"value": "@pipeline().parameters.EntTriggerTime",
+															"type": "Expression"
+														},
+														"EntRunId": {
+															"value": "@pipeline().parameters.EntRunId",
+															"type": "Expression"
+														},
+														"ModuleRunId": {
+															"value": "@pipeline().RunId",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									},
+									{
+										"value": "Snowflake",
+										"activities": [
+											{
+												"name": "Execute PL_ING_08_SnowflakeLoad",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"policy": {
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "PL_ING_02_SnowflakeLoad",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"FwkItem": {
+															"value": "@item()",
+															"type": "Expression"
+														},
+														"PL_01TriggerTime": {
+															"value": "@pipeline().parameters.EntTriggerTime",
+															"type": "Expression"
+														},
+														"EntRunId": {
+															"value": "@pipeline().parameters.EntRunId",
+															"type": "Expression"
+														},
+														"ModuleRunId": {
+															"value": "@pipeline().RunId",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									},
+									{
+										"value": "OData",
+										"activities": [
+											{
+												"name": "Execute PL_ING_09_ODataLoad",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"policy": {
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "PL_ING_09_ODataLoad",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"FwkItem": {
+															"value": "@item()",
+															"type": "Expression"
+														},
+														"PL_01TriggerTime": {
+															"value": "@pipeline().parameters.EntTriggerTime",
+															"type": "Expression"
+														},
+														"EntRunId": {
+															"value": "@pipeline().parameters.EntRunId",
+															"type": "Expression"
+														},
+														"ModuleRunId": {
+															"value": "@pipeline().RunId",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									}
+								]
+							}
+						},
+						{
+							"name": "DeleteLandingSinkFolder",
+							"type": "Delete",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "DS_ADLS_BIN_Folder",
+									"type": "DatasetReference",
+									"parameters": {
+										"InstanceURL": {
+											"value": "@item().SinkInstanceURL",
+											"type": "Expression"
+										},
+										"FullPath": {
+											"value": "@item().SinkPath",
+											"type": "Expression"
+										}
+									}
+								},
+								"enableLogging": false,
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "sp_FwkLogInsert",
+				"description": "Executes the SP spi_FwkLogInsert to insert record into FwkLog table with the execution module information by pipeline id and with null status.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spi_FwkLogInsert]",
+					"storedProcedureParameters": {
+						"EntRunId": {
+							"value": {
+								"value": "@pipeline().parameters.EntRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"Module": {
+							"value": {
+								"value": "@concat('Ingestion > Batch ', pipeline().parameters.BatchItem['BatchNumber'])",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"StartDate": {
+							"value": {
+								"value": "@formatdatetime(pipeline().TriggerTime)",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						},
+						"ADFTriggerName": {
+							"value": {
+								"value": "@pipeline().parameters.ADFTriggerName",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_UpdateExecutionLog_succeeded",
+				"description": "Executes the SP spu_FwkLogUpdate to update the record created by the ‘InsertIntoFwkLog’ activity in the table ‘FwkLog’ by updating the columns ‘PipelineStatus’ to ‘Success’.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "ForEachObject",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spu_FwkLogUpdate]",
+					"storedProcedureParameters": {
+						"ErrorMessage": {
+							"value": null,
+							"type": "String"
+						},
+						"JobRunUrl": {
+							"value": null,
+							"type": "String"
+						},
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStatus": {
+							"value": {
+								"value": "Succeeded",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_UpdateExecutionLog_failed",
+				"description": "Executes the SP spu_FwkLogUpdate to update the record created by the ‘InsertIntoFwkLog’ activity in the table ‘FwkLog’ by updating the columns ‘PipelineStatus’ to ‘Success’.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "ForEachObject",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spu_FwkLogUpdate]",
+					"storedProcedureParameters": {
+						"ErrorMessage": {
+							"value": null,
+							"type": "String"
+						},
+						"JobRunUrl": {
+							"value": null,
+							"type": "String"
+						},
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStatus": {
+							"value": {
+								"value": "Failed",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "setOutputStopBatchOnFailure",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "sp_UpdateExecutionLog_failed",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "pipelineReturnValue",
+					"value": [
+						{
+							"key": "outputStopETL",
+							"value": {
+								"type": "Expression",
+								"content": "@if(\n    equals(\n        toUpper(string(pipeline().parameters.LookupDtLayerOutput['value'][0]['StopBatchIfFailure'])),\n         'TRUE'\n    ), \n    true,\n    false\n)"
+							}
+						}
+					],
+					"setSystemVariable": true
+				}
+			},
+			{
+				"name": "setOutputStopBatch",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "sp_UpdateExecutionLog_succeeded",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "pipelineReturnValue",
+					"value": [
+						{
+							"key": "outputStopETL",
+							"value": {
+								"type": "Boolean",
+								"content": false
+							}
+						}
+					],
+					"setSystemVariable": true
+				}
+			}
+		],
+		"parameters": {
+			"BatchItem": {
+				"type": "array"
+			},
+			"EntRunId": {
+				"type": "string"
+			},
+			"EntTriggerTime": {
+				"type": "string"
+			},
+			"ADFTriggerName": {
+				"type": "string"
+			},
+			"LookupDtLayerOutput": {
+				"type": "array"
+			}
+		},
+		"folder": {
+			"name": "01 Ingestion Module"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-07-06T08:29:19Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

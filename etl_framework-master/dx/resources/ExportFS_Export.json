@@ -1,0 +1,20 @@
+[
+    {
+        "Query": "SELECT * FROM Application_MEF_History.DimCurrency WHERE MGT_isCurrent = TRUE AND MG T_isDeleted = FALSE",
+        "Path": "CSV/History_DimCurrency.csv",
+        "Params": {
+            "header": true,
+            "nullValue": null,
+            "sep": "|"
+        }
+    },
+    {
+        "Query": "SELECT * FROM Application_MEF_History.DimCustomer WHERE MGT_isCurrent = TRUE AND MGT_isDeleted = FALSE",
+        "Path": "CSV/History_DimCustomer.csv",
+        "Params": {
+            "header": true,
+            "nullValue": null,
+            "sep": "|"
+        }
+    }
+]

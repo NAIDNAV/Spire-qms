@@ -1,0 +1,46 @@
+{
+	"name": "DS_ADLS_BIN_File",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_adls",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"InstanceURL": "@dataset().InstanceURL"
+			}
+		},
+		"parameters": {
+			"InstanceURL": {
+				"type": "string"
+			},
+			"FullPath": {
+				"type": "string"
+			},
+			"FileName": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "01 Ingestion Module DS"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@dataset().FileName",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@replace(concat('$', dataset().FullPath), concat('$', split(dataset().FullPath, '/')[0], '/'), '')",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "@split(dataset().FullPath, '/')[0]",
+					"type": "Expression"
+				}
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

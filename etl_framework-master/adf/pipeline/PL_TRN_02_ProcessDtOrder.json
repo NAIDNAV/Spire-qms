@@ -1,0 +1,276 @@
+{
+	"name": "PL_TRN_02_ProcessDtOrder",
+	"properties": {
+		"activities": [
+			{
+				"name": "LookupDtLayer",
+				"description": "Executes the SP ‘sps_LookupDtOrder’ to get the information about DtOrder numbers.",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[dbo].[sps_LookupDtLayer]",
+						"storedProcedureParameters": {
+							"DtOrder": {
+								"type": "Int32",
+								"value": {
+									"value": "@pipeline().parameters.DtOrderItem['DtOrder']",
+									"type": "Expression"
+								}
+							},
+							"FwkLayerId": {
+								"type": "String",
+								"value": {
+									"value": "@if(\n    equals(pipeline().parameters.FwkLayerId, 'none'),\n    null,\n    pipeline().parameters.FwkLayerId\n)",
+									"type": "Expression"
+								}
+							},
+							"FwkTriggerId": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.FwkTriggerId",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "DS_SQL_Configuration",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ForEachDtLayer",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "LookupDtLayer",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@array(activity('LookupDtLayer').output.value)",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 30,
+					"activities": [
+						{
+							"name": "IfLayerIsStopped",
+							"type": "IfCondition",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@variables('varStopETLforLayers')",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "Execute PL_TRN_03_PreProcessLayer",
+										"type": "ExecutePipeline",
+										"dependsOn": [],
+										"policy": {
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "PL_TRN_03_PreProcessLayer",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"LayerItem": {
+													"value": "@item()",
+													"type": "Expression"
+												},
+												"EntRunId": {
+													"value": "@pipeline().parameters.EntRunId",
+													"type": "Expression"
+												},
+												"EntTriggerTime": {
+													"value": "@pipeline().parameters.EntTriggerTime",
+													"type": "Expression"
+												},
+												"FwkTriggerId": {
+													"value": "@pipeline().parameters.FwkTriggerId",
+													"type": "Expression"
+												},
+												"DtOrderItem": {
+													"value": "@pipeline().parameters.DtOrderItem",
+													"type": "Expression"
+												},
+												"ADFTriggerName": {
+													"value": "@pipeline().parameters.ADFTriggerName",
+													"type": "Expression"
+												}
+											}
+										}
+									},
+									{
+										"name": "setVarStopETLforLayer",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "Execute PL_TRN_03_PreProcessLayer",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "varStopETLforLayers",
+											"value": {
+												"value": "@activity('Execute PL_TRN_03_PreProcessLayer').output.pipelineReturnValue['outputStopETL']",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "setOutputStopOnFailureResult",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "Execute PL_TRN_03_PreProcessLayer",
+												"dependencyConditions": [
+													"Failed"
+												]
+											}
+										],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "varStopETLforLayers",
+											"value": {
+												"value": "@activity('Execute PL_TRN_03_PreProcessLayer').output.pipelineReturnValue['outputStopETL']",
+												"type": "Expression"
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "setOutputStopETL",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "ForEachDtLayer",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "pipelineReturnValue",
+					"value": [
+						{
+							"key": "outputStopETL",
+							"value": {
+								"type": "Expression",
+								"content": "@variables('varStopETLforLayers')"
+							}
+						}
+					],
+					"setSystemVariable": true
+				}
+			},
+			{
+				"name": "setOutputStopOrContinueETLonFailure",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "ForEachDtLayer",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "pipelineReturnValue",
+					"value": [
+						{
+							"key": "outputStopETL",
+							"value": {
+								"type": "Expression",
+								"content": "@variables('varStopETLforLayers')"
+							}
+						}
+					],
+					"setSystemVariable": true
+				}
+			}
+		],
+		"parameters": {
+			"EntRunId": {
+				"type": "string"
+			},
+			"EntTriggerTime": {
+				"type": "string"
+			},
+			"FwkTriggerId": {
+				"type": "string"
+			},
+			"DtOrderItem": {
+				"type": "array"
+			},
+			"FwkLayerId": {
+				"type": "string"
+			},
+			"ADFTriggerName": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"varStopETLforLayers": {
+				"type": "Boolean",
+				"defaultValue": false
+			}
+		},
+		"folder": {
+			"name": "02 Transformation Module"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-07-06T08:29:16Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

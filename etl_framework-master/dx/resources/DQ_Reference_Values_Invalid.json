@@ -1,0 +1,20 @@
+[
+    {
+        "Value": "ReferenceKey_Mandatory",
+        "Description": "Some description"
+    },
+    {
+        "ReferenceKey": "Value_Mandatory",
+        "Description": "Some description"
+    },
+    {
+        "ReferenceKey": "Key1",
+        "Value": "Value1",
+        "Description": "Some description 1"
+    },
+    {
+        "ReferenceKey": "Key1",
+        "Value": "Value1",
+        "Description": "Some description 2"
+    }
+]

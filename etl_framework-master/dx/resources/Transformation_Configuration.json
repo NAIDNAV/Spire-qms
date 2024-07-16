@@ -1,0 +1,386 @@
+[
+    {
+        "Key": "LandingSQLPseudonymization",
+        "Entities": [
+            {
+                "DatabaseName": "Application_MEF_LandingSQL",
+                "EntityName": "Address",
+                "Transformations": [
+                    {
+                        "TransformationType": "Select",
+                        "Params": {
+                            "columns": [
+                                "AddressID",
+                                "AddressLine1",
+                                "AddressLine2",
+                                "PostalCode",
+                                "City",
+                                "StateProvince",
+                                "CountryRegion"
+                            ]
+                        }
+                    },
+                    {
+                        "TransformationType": "Filter",
+                        "Params": {
+                            "condition": "AddressID < 15000"
+                        }
+                    },
+                    {
+                        "TransformationType": "Deduplicate",
+                        "Params": {
+                            "columns": [
+                                "*"
+                            ]
+                        }
+                    },
+                    {
+                        "TransformationType": "ReplaceNull",
+                        "Params": {
+                            "transformationSpecs": [
+                                {
+                                    "column": [
+                                        "AddressLine2"
+                                    ],
+                                    "value": "n/a"
+                                },
+                                {
+                                    "column": [
+                                        "AddressID"
+                                    ],
+                                    "value": -1
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "TransformationType": "Join",
+                        "Params": {
+                            "transformationSpecs": {
+                                "joinTable": "Application_MEF_StagingSQL.CustomerAddress",
+                                "joinType": "LEFT",
+                                "joinColumns": "AddressID,AddressID",
+                                "selectColumns": "table.*, AddressType"
+                            }
+                        }
+                    },
+                    {
+                        "TransformationType": "Pseudonymization",
+                        "Params": {
+                            "columns": [
+                                "AddressLine1",
+                                "City"
+                            ]
+                        }
+                    }
+                ],
+                "Params": {
+                    "batchNumber": 2
+                }
+            },
+            {
+                "DatabaseName": "Application_MEF_LandingSQL",
+                "EntityName": "Customer",
+                "Transformations": [
+                    {
+                        "TransformationType": "Pseudonymization",
+                        "Params": {
+                            "columns": [
+                                "FirstName",
+                                "MiddleName",
+                                "LastName",
+                                "EmailAddress",
+                                "Phone"
+                            ]
+                        }
+                    }
+                ],
+                "Params": {
+                    "partitionColumns": [
+                        "CompanyName"
+                    ]
+                }
+            },
+            {
+                "DatabaseName": "Application_MEF_LandingSQL",
+                "EntityName": "[*]_Full",
+                "Params": {
+                    "fwkTriggerId": "Weekly"
+                }
+            },
+            {
+                "DatabaseName": "Application_MEF_LandingSQL",
+                "EntityName": "CustomerJoinAddress",
+                "Transformations": [
+                    {
+                        "TransformationType": "Pseudonymization",
+                        "Params": {
+                            "columns": [
+                                "AddressType"
+                            ]
+                        }
+                    },
+                    {
+                        "TransformationType": "DeriveColumn",
+                        "Params": {
+                            "transformationSpecs": [
+                                {
+                                    "column": "AddressIDDerived",
+                                    "value": "AddressID + 10"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "TransformationType": "Cast",
+                        "Params": {
+                            "transformationSpecs": [
+                                {
+                                    "column": ["AddressIDDerived"],
+                                    "dataType": "string"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "TransformationType": "RenameColumn",
+                        "Params": {
+                            "transformationSpecs": {
+                                "column": ["AddressIDDerived"],
+                                "value": ["AddressIDRenamed"]
+                            }
+                        }
+                    },
+                    {
+                        "TransformationType": "SelectExpression",
+                        "Params": {
+                            "expressions": [
+                                "*",
+                                "CAST(AddressIDRenamed AS INT) AS AddressIDRenamedInt"
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                "DatabaseName": "Application_MEF_LandingSQL",
+                "EntityName": "Contract"
+            }
+        ]
+    },
+    {
+        "Key": "LandingCSVPseudonymization",
+        "Entities": [
+            {
+                "DatabaseName": "Application_MEF_LandingCSV",
+                "EntityName": "CustomerCSV"
+            }
+        ]
+    },
+    {
+        "Key": "LandingOraclePseudonymization",
+        "Entities": [
+            {
+                "DatabaseName": "Application_MEF_LandingOracle",
+                "EntityName": "DIMCUSTOMER",
+                "Transformations": [
+                    {
+                        "TransformationType": "Pseudonymization",
+                        "Params": {
+                            "columns": [
+                                "AddressType"
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                "DatabaseName": "Application_MEF_LandingOracle",
+                "EntityName": "DIMCURRENCY"
+            },
+            {
+                "DatabaseName": "Application_MEF_LandingOracle",
+                "EntityName": "DIMCUSTOMERMSSTATUS",
+                "Transformations": [
+                    {
+                        "TransformationType": "Pseudonymization",
+                        "Params": {
+                            "columns": [
+                                "FIRSTNAME",
+                                "LASTNAME"
+                            ]
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "Key": "LandingSnowflakePseudonymization",
+        "Entities": [
+            {
+                "DatabaseName": "Application_MEF_LandingSnowflake",
+                "EntityName": "callcenter",
+                "Transformations": [
+                    {
+                        "TransformationType": "Pseudonymization",
+                        "Params": {
+                            "columns": [
+                                "CC_NAME"
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                "DatabaseName": "Application_MEF_LandingSnowflake",
+                "EntityName": "catalogpage"
+            }
+        ]
+    },
+    {
+        "Key": "LandingODataPseudonymization",
+        "Entities": [
+            {
+                "DatabaseName": "Application_MEF_LandingOData",
+                "EntityName": "[*]"
+            }
+        ]
+    },
+    {
+        "Key": "StagingHistorization",
+        "Entities": [
+            {
+                "DatabaseName": "Application_MEF_StagingSQL",
+                "EntityName": "Address",
+                "Params": {
+                    "writeMode": "SCDType2Delta",
+                    "partitionColumns": [
+                        "MGT_isCurrent",
+                        "MGT_isDeleted"
+                    ]
+                }
+            },
+            {
+                "DatabaseName": "Application_MEF_StagingSQL",
+                "EntityName": "Address",
+                "Params": {
+                    "writeMode": "Snapshot",
+                    "keyColumns": [
+                        "AddressID"
+                    ],
+                    "sinkEntityName": "AddressSnapshot"
+                }
+            },
+            {
+                "DatabaseName": "Application_MEF_StagingSQL",
+                "EntityName": "CustomerAddress",
+                "Params": {
+                    "writeMode": "SCDType2Delta",
+                    "partitionColumns": [
+                        "MGT_isCurrent",
+                        "MGT_isDeleted"
+                    ]
+                }
+            },
+            {
+                "DatabaseName": "Application_MEF_StagingSQL",
+                "EntityName": "Customer",
+                "Params": {
+                    "writeMode": "SCDType2Delta",
+                    "partitionColumns": [
+                        "MGT_isCurrent",
+                        "MGT_isDeleted"
+                    ]
+                }
+            },
+            {
+                "DatabaseName": "Application_MEF_StagingSQL",
+                "EntityName": "Customer_Full",
+                "Params": {
+                    "writeMode": "SCDType2Delete",
+                    "sinkEntityName": "Customer",
+                    "fwkTriggerId": "Weekly",
+                    "partitionColumns": [
+                        "MGT_isCurrent",
+                        "MGT_isDeleted"
+                    ],
+                    "batchNumber": 2
+                }
+            },
+            {
+                "DatabaseName": "Application_MEF_StagingSQL",
+                "EntityName": "V_Customer",
+                "Params": {
+                    "writeMode": "SCDType1",
+                    "keyColumns": [
+                        "CustomerID"
+                    ],
+                    "sinkEntityName": "CustomerFromView"
+                }
+            },
+            {
+                "DatabaseName": "Application_MEF_StagingSQL",
+                "EntityName": "CustomerJoinAddress",
+                "Params": {
+                    "writeMode": "SCDType2Delta"
+                }
+            },
+            {
+                "DatabaseName": "Application_MEF_StagingSQL",
+                "EntityName": "Contract",
+                "Params": {
+                    "keyColumns": [
+                        "ContractNumber"
+                    ]
+                }
+            },
+            {
+                "DatabaseName": "Application_MEF_StagingSQL",
+                "EntityName": "SalesOrderHeader"
+            },
+            {
+                "DatabaseName": "Application_MEF_StagingSQL",
+                "EntityName": "SalesOrderHeader",
+                "Transformations": [
+                    {
+                        "TransformationType": "Aggregate",
+                        "Params": {
+                            "transformationSpecs": {
+                                "groupBy": ["DueDate", "Status"],
+				"aggregations": [
+                                    {
+                                        "operation": "sum",
+                                        "column": "TotalDue",
+                                        "alias": "SumTotalDue"
+                                    },
+                                    {
+                                        "operation": "avg",
+                                        "column": "TotalDue",
+                                        "alias": "AvgTotalDue"
+                                    },
+                                    {
+                                        "operation": "min",
+                                        "column": "SubTotal" ,
+                                        "alias": "MinSubTotal"
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                ],
+                "Params": {
+                    "writeMode": "Overwrite",
+                    "sinkEntityName": "SalesOrderHeaderAggregated"
+                }
+            },
+            {
+                "DatabaseName": "Application_MEF_StagingOracle",
+                "EntityName": "[*]",
+                "Params": {
+                    "writeMode": "SCDType2Delta"
+                }
+            }
+        ]
+    }
+]

@@ -1,0 +1,145 @@
+[
+    {
+        "FwkLinkedServiceId": "SourceSQL",
+        "Entities": [
+            {
+                "Entity": "SalesLT.Address",
+                "TypeLoad": "Delta",
+                "WmkColumnName": "ModifiedDate",
+                "TableHint": "WITH (NOLOCK)",
+                "QueryHint": "OPTION (FORCE ORDER)"
+            },
+            {
+                "Entity": "SalesLT.CustomerAddress",
+                "TypeLoad": "Delta",
+                "WmkColumnName": "ModifiedDate",
+                "SelectedColumnNames": "CustomerID, AddressID, AddressType, ModifiedDate"
+            },
+            {
+                "Entity": "SalesLT.Customer",
+                "TypeLoad": "Delta",
+                "WmkColumnName": "ModifiedDate"
+            },
+            {
+                "Entity": "SalesLT.Customer",
+                "Params": {
+                    "sinkEntityName": "Customer_Full",
+                    "fwkTriggerId": "Weekly"
+                },
+                "TypeLoad": "Full",
+                "SelectedColumnNames": "#primaryColumns"
+            },
+            {
+                "Entity": "SalesLT.SalesOrderHeader",
+                "TypeLoad": "Delta",
+                "WmkColumnName": "ModifiedDate"
+            },
+            {
+                "Entity": "SalesLT.CustomerJoinAddress",
+                "MetadataParams": {
+                    "primaryColumns": "AddressID, CustomerID",
+                    "wmkDataType": "datetime"
+                },
+                "TypeLoad": "Delta",
+                "WmkColumnName": "ModifiedDate",
+                "Query": "SELECT CU.CustomerID, CA.AddressID, CA.AddressType, CU.FirstName, CU.ModifiedDate FROM SalesLT.Customer CU JOIN SalesLT.CustomerAddress CA ON CU.CustomerID = CA.CustomerID WHERE CU.Title IS NOT NULL AND CU.MiddleName LIKE 'E.%' and CU.NameStyle = 1"
+            },
+            {
+                "Entity": "SalesLT.Contract",
+                "TypeLoad": "Full"
+            }
+        ]
+    },
+    {
+        "FwkLinkedServiceId": "SourceOracle",
+        "Entities": [
+            {
+                "Entity": "SALESORA.DIMCUSTOMER",
+                "MetadataParams": {
+                    "primaryColumns": "CUSTOMERKEY"
+                },
+                "TypeLoad": "Full"
+            },
+            {
+                "Entity": "SALESORA.DIMCURRENCY",
+                "MetadataParams": {
+                    "primaryColumns": "CURRENCYKEY"
+                },
+                "TypeLoad": "Full"
+            },
+            {
+                "Entity": "SALESORA.DIMCUSTOMERMSSTATUS",
+                "MetadataParams": {
+                    "primaryColumns": "CUSTOMERKEY",
+                    "wmkDataType": "stringDatetime"
+                },
+                "TypeLoad": "Delta",
+                "WmkColumnName": "BSTR",
+                "Query": "SELECT CUSTOMERKEY, FIRSTNAME, LASTNAME, EMAILADDRESS, BSTR, BIRTHDATE FROM SALESORA.DIMCUSTOMER2 WHERE MARITALSTATUS = 'M' AND BIRTHDATE > TO_DATE('2000-01-01','YYYY-MM-DD')"
+            }
+        ]
+    },
+    {
+        "FwkLinkedServiceId": "SourceSnowflake",
+        "Entities": [
+            {
+                "Entity": "TPCDS_SF100TCL.CALL_CENTER",
+                "Params": {
+                    "sinkEntityName": "callcenter"
+                },
+                "MetadataParams": {
+                    "primaryColumns": "CC_CALL_CENTER_SK",
+                    "wmkDataType": "datetime"
+                },
+                "TypeLoad": "Delta",
+                "WmkColumnName": "MODIFIED_DATE",
+                "Query": "SELECT *, GETDATE() AS MODIFIED_DATE FROM TPCDS_SF100TCL.CALL_CENTER"
+            },
+            {
+                "Entity": "TPCDS_SF100TCL.CATALOG_PAGE",
+                "Params": {
+                    "sinkEntityName": "catalogpage"
+                },
+                "MetadataParams": {
+                    "primaryColumns": "CP_CATALOG_PAGE_SK"
+                },
+                "TypeLoad": "Full",
+                "SelectedColumnNames": "CP_CATALOG_PAGE_SK, CP_DEPARTMENT, CP_DESCRIPTION, CP_CATALOG_PAGE_NUMBER",
+                "TableHint": "/*+ COALESCE(3) */"
+            }
+        
+        ]
+    },
+    {
+        "FwkLinkedServiceId": "SourceOData",
+        "Entities": [
+            {
+                "Entity": "Employees",
+                "MetadataParams": {
+                    "primaryColumns": "EmployeeID"
+                },
+                "TypeLoad": "Full",
+                "SelectedColumnNames": "EmployeeID, LastName, FirstName, Title, BirthDate, HireDate, City, Country"
+            },
+            {
+                "Entity": "Products",
+                "MetadataParams": {
+                    "primaryColumns": "ProductID"
+                },
+                "TypeLoad": "Full",
+                "Query": "$select=ProductID,ProductName,UnitPrice,UnitsInStock,UnitsOnOrder,ReorderLevel,Discontinued & $filter=UnitsOnOrder gt 0"
+            },
+            {
+                "Entity": "Orders",
+                "MetadataParams": {
+                    "primaryColumns": "OrderID",
+                    "wmkDataType": "datetime"
+                },
+                "TypeLoad": "Delta",
+                "WmkColumnName": "OrderDate",
+                "Query": "$filter=EmployeeID gt 5"
+            }
+        
+        ]
+    }
+]

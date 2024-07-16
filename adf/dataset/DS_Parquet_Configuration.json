@@ -1,0 +1,43 @@
+{
+	"name": "DS_Parquet_Configuration",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_adls",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"InstanceURL": {
+					"value": "@dataset().InstanceURL",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"InstanceURL": {
+				"type": "string"
+			},
+			"FullPath": {
+				"type": "string"
+			},
+			"FolderName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "Parquet",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": {
+					"value": "@concat(replace(concat('$', dataset().FullPath), concat('$', split(dataset().FullPath, '/')[0], '/'), ''), '/',dataset().FolderName)",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "@split(dataset().FullPath, '/')[0]",
+					"type": "Expression"
+				}
+			},
+			"compressionCodec": "snappy"
+		},
+		"schema": []
+	}
+}

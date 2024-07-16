@@ -1,0 +1,152 @@
+name: CI_CD_DX
+
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'dx/**'
+
+env:
+  DATABRICKS_HOST_DEV: https://adb-8731781706562404.4.azuredatabricks.net
+  DATABRICKS_TOKEN_DEV: ${{secrets.DATABRICKS_TOKEN_MEF_DEV}}
+  ADFNAME_DEV: "ddfcpmef"
+  RESOURCEGROUP_DEV: "0001-d-cpmef"
+  ADF_PIPELINE_NAME: "PL_GenerateConfigurationPipeline"
+
+jobs:
+  CI_CD_DX:
+    runs-on: [ azure-runners ]
+    concurrency: CI_CD_DX
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Deploy assets to DX
+        uses: dfs-aa-dl/action-deploy-databricks@v1
+        with:
+                databricks-host: ${{env.DATABRICKS_HOST_DEV}}
+                databricks-token: ${{env.DATABRICKS_TOKEN_DEV}}
+                notebooks-source-dir: dx/notebooks/assets
+                resources-source-dir: dx/resources
+                resources-target-dir: dbfs:/FileStore/MetadataInput
+                notebooks-target-dir: /Code/assets
+
+      - name: Deploy compartments to DX
+        uses: dfs-aa-dl/action-deploy-databricks@v1
+        with:
+          databricks-host: ${{env.DATABRICKS_HOST_DEV}}
+          databricks-token: ${{secrets.DATABRICKS_TOKEN_DEV}}
+          notebooks-source-dir: dx/notebooks/compartment
+          resources-source-dir: dx/resources
+          resources-target-dir: dbfs:/FileStore/MetadataInput
+          notebooks-target-dir: /Code/compartment
+
+      - name: Deploy mdmf to DX
+        uses: dfs-aa-dl/action-deploy-databricks@v1
+        with:
+          databricks-host: ${{env.DATABRICKS_HOST_DEV}}
+          databricks-token: ${{secrets.DATABRICKS_TOKEN_DEV}}
+          notebooks-source-dir: dx/notebooks/mdmf
+          resources-source-dir: dx/resources
+          resources-target-dir: dbfs:/FileStore/MetadataInput
+          notebooks-target-dir: /Code/mdmf
+
+      - name: Base SHA
+        id: base_sha
+        run: echo "sha=$(git rev-parse origin/master)" >> $GITHUB_OUTPUT
+
+      - name: Get Changed Directories
+        id: changed_folders_files
+        uses: tj-actions/changed-files@v35
+        with:
+            base_sha: "${{ steps.base_sha.outputs.sha }}"
+      
+      - name: List all changed files
+        run: |
+          for file in ${{ steps.changed_folders_files.outputs.all_changed_and_modified_files }}; do
+            echo "$file was changed"
+          done
+
+      - name: Setup Azure CLI
+        uses: azure/login@v1
+        with:
+          creds: '{"clientId":"${{ secrets.CLIENT_ID_ADF_MEF_DEV }}","clientSecret":"${{ secrets.CLIENT_SECRET_ADF_MEF_DEV }}","subscriptionId":"${{ secrets.SUBSCRIPTIONID_MEF_DEV }}","tenantId":"${{ secrets.TENANT_ID }}"}'
+          enable-AzPSSession: true
+      
+      - name: Check for DEV Config file change
+        id: dev_config_file_change
+        if: ${{ github.base_ref == 'master' }}
+        run: |
+          if echo "${{ steps.changed_folders_files.outputs.all_changed_and_modified_files }}" | grep -q "dx/notebooks/compartment/includes/environmentDevConfig.py"; then
+            echo "::set-output name=dev_config_file::true"
+          else
+            echo "::set-output name=dev_config_file::false"
+          fi
+      
+      - name: Check for DEV resources folder change
+        id: dev_resources_folder_change
+        if: ${{ github.base_ref == 'master' }}
+        run: |
+          if echo "${{ steps.changed_folders_files.outputs.all_changed_and_modified_files }}" | grep -q "dx/resources/"; then
+            echo "::set-output name=dev_resources_folder::true"
+          else
+            echo "::set-output name=dev_resources_folder::false"
+          fi
+
+      - name: Trigger Development's ADF pipeline
+        if: ${{ github.base_ref == 'master' }}
+        run: |
+          change_flag=0
+          if [[ "${{ steps.dev_config_file_change.outputs.dev_config_file }}" == "true" && "${{ steps.dev_resources_folder_change.outputs.dev_resources_folder }}" == "true" ]]; then
+            az config set extension.use_dynamic_install=yes_without_prompt
+            runId=$(az datafactory pipeline create-run --resource-group ${{env.RESOURCEGROUP_DEV}} --factory-name ${{env.ADFNAME_DEV}} --name ${{env.ADF_PIPELINE_NAME}} --parameters '{"GenerateConfigParameter":"Full"}' --query 'runId' --output tsv)
+            change_flag=1
+            echo "Triggered the pipeline with GenerateConfigParameter=Full."
+          elif [[ "${{ steps.dev_config_file_change.outputs.dev_config_file }}" == "false" && "${{ steps.dev_resources_folder_change.outputs.dev_resources_folder }}" == "true" ]]; then
+            az config set extension.use_dynamic_install=yes_without_prompt
+            runId=$(az datafactory pipeline create-run --resource-group ${{env.RESOURCEGROUP_DEV}} --factory-name ${{env.ADFNAME_DEV}} --name ${{env.ADF_PIPELINE_NAME}} --parameters '{"GenerateConfigParameter":"Partial"}' --query 'runId' --output tsv)
+            change_flag=1
+            echo "Triggered the pipeline with GenerateConfigParameter=Partial."
+          elif [[ "${{ steps.dev_config_file_change.outputs.dev_config_file }}" == "true" && "${{ steps.dev_resources_folder_change.outputs.dev_resources_folder }}" == "false" ]]; then
+            az config set extension.use_dynamic_install=yes_without_prompt
+            runId=$(az datafactory pipeline create-run --resource-group ${{env.RESOURCEGROUP_DEV}} --factory-name ${{env.ADFNAME_DEV}} --name ${{env.ADF_PIPELINE_NAME}} --parameters '{"GenerateConfigParameter":"Full"}' --query 'runId' --output tsv)
+            change_flag=1
+            echo "Triggered the pipeline with GenerateConfigParameter=Full."
+          else
+            echo "No change in config files or resources folders."
+          fi
+
+          if [ "$change_flag" -eq 1 ]; then
+            echo "ADF Pipeline Run ID: $runId"
+
+            while true; do
+              status=$(az datafactory pipeline-run show --resource-group ${{env.RESOURCEGROUP_DEV}} --factory-name ${{env.ADFNAME_DEV}} --run-id $runId --query 'status' --output tsv)
+
+              if [ "$status" = "Succeeded" ]; then
+                echo "ADF Pipeline Run Completed Successfully."
+                break
+              elif [ "$status" = "Failed" ]; then
+                echo "ADF Pipeline Run failed."
+                exit 1
+              else
+                echo "ADF Pipeline is still running. Waiting..."
+                sleep 30
+              fi
+            done
+          fi
+
+  blackduck:
+    runs-on: [ azure-runners ]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          path: './dx/'
+
+      - name: Scan BlackBuck
+        uses: dfs-aa-dl/action-blackduck-rapidscan@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          blackduck-api-token: ${{ secrets.BLACKDUCKSCAN_TOKEN }}

@@ -1,0 +1,85 @@
+[
+    {
+        "Parent": "Address",
+        "ParentAttribute": "WK_Address_Identifier",
+        "Child": "CustomerAddress",
+        "ChildAttribute": "WK_Address_Identifier",
+        "KeyType": "PIdentifier",
+        "RolePlayingGroup": ""
+    },
+    {
+        "Parent": "Address",
+        "ParentAttribute": "AddressID",
+        "Child": "CustomerAddress",
+        "ChildAttribute": "AddressID",
+        "KeyType": "RefIdentifier",
+        "RolePlayingGroup": ""
+    },
+    {
+        "Parent": "Address",
+        "ParentAttribute": "WK_Address_Identifier",
+        "Child": "SalesOrderHeader",
+        "ChildAttribute": "WK_BillToAddress_Identifier",
+        "KeyType": "PIdentifier",
+        "RolePlayingGroup": "BillToAddress"
+    },
+    {
+        "Parent": "Address",
+        "ParentAttribute": "AddressID",
+        "Child": "SalesOrderHeader",
+        "ChildAttribute": "BillToAddressID",
+        "KeyType": "RefIdentifier",
+        "RolePlayingGroup": "BillToAddress"
+    },
+    {
+        "Parent": "Address",
+        "ParentAttribute": "WK_Address_Identifier",
+        "Child": "SalesOrderHeader",
+        "ChildAttribute": "WK_ShipToAddress_Identifier",
+        "KeyType": "PIdentifier",
+        "RolePlayingGroup": "ShipToAddress"
+    },
+    {
+        "Parent": "Address",
+        "ParentAttribute": "AddressID",
+        "Child": "SalesOrderHeader",
+        "ChildAttribute": "ShipToAddressID",
+        "KeyType": "RefIdentifier",
+        "RolePlayingGroup": "ShipToAddress"
+    },
+    {
+        "Parent": "Customer",
+        "ParentAttribute": "WK_Customer_Identifier",
+        "Child": "CustomerAddress",
+        "ChildAttribute": "WK_Customer_Identifier",
+        "KeyType": "PIdentifier"
+    },
+    {
+        "Parent": "Customer",
+        "ParentAttribute": "CustomerID",
+        "Child": "CustomerAddress",
+        "ChildAttribute": "CustomerID",
+        "KeyType": "RefIdentifier"
+    },
+    {
+        "Parent": "CustomerNoIdentity",
+        "ParentAttribute": "CustomerID",
+        "Child": "CustomerAddress",
+        "ChildAttribute": "CustomerID",
+        "KeyType": "PIdentifier"
+    },
+    {
+        "Parent": "Customer",
+        "ParentAttribute": "WK_Customer_Identifier",
+        "Child": "SalesOrderHeader",
+        "ChildAttribute": "WK_Customer_Identifier",
+        "KeyType": "PIdentifier"
+    },
+    {
+        "Parent": "Customer",
+        "ParentAttribute": "CustomerID",
+        "Child": "SalesOrderHeader",
+        "ChildAttribute": "CustomerID",
+        "KeyType": "RefIdentifier"
+    }
+]

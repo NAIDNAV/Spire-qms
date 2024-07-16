@@ -1,0 +1,319 @@
+{
+	"name": "PL_ETLPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "Execute Ingestion Master",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "PL_ING_00_IngestionMaster",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"EntRunId": {
+							"value": "@pipeline().parameters.EntRunId",
+							"type": "Expression"
+						},
+						"EntTriggerTime": {
+							"value": "@pipeline().parameters.EntTriggerTime",
+							"type": "Expression"
+						},
+						"FwkTriggerId": {
+							"value": "@pipeline().parameters.FwkTriggerId",
+							"type": "Expression"
+						},
+						"FwkLayerId": {
+							"value": "@pipeline().parameters.FwkLayerId",
+							"type": "Expression"
+						},
+						"ADFTriggerName": {
+							"value": "@pipeline().parameters.ADFTriggerName",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Log Ingestion Failure To Mattermost",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Execute Ingestion Master",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "PL_LogToMattermost",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"Message": "Execution of pipeline 'PL_ING_01_ProcessIngestion' responsible for ingestion of data has failed",
+						"EntRunId": {
+							"value": "@pipeline().parameters.EntRunId",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Set continueETL after Ingestion",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Execute Ingestion Master",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "varContinueETL",
+					"value": {
+						"value": "@activity('Execute Ingestion Master').output.pipelineReturnValue['outputContinueETL']",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "If continueETL with Transformation",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Set continueETL after Ingestion",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@variables('varContinueETL')",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Execute Transformation Master",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_TRN_00_TransformationMaster",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"EntRunId": {
+										"value": "@pipeline().parameters.EntRunId",
+										"type": "Expression"
+									},
+									"EntTriggerTime": {
+										"value": "@pipeline().parameters.EntTriggerTime",
+										"type": "Expression"
+									},
+									"FwkTriggerId": {
+										"value": "@pipeline().parameters.FwkTriggerId",
+										"type": "Expression"
+									},
+									"FwkLayerId": {
+										"value": "@pipeline().parameters.FwkLayerId",
+										"type": "Expression"
+									},
+									"ADFTriggerName": {
+										"value": "@pipeline().parameters.ADFTriggerName",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Log Transformation Failure To Mattermost",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Execute Transformation Master",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_LogToMattermost",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Message": "Execution of pipeline 'PL_TRN_01_ProcessTransformations' responsible for data transformation has failed",
+									"EntRunId": {
+										"value": "@pipeline().parameters.EntRunId",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Set continueETL after Transformation",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Execute Transformation Master",
+									"dependencyConditions": [
+										"Completed"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "varContinueETL",
+								"value": {
+									"value": "@activity('Execute Transformation Master').output.pipelineReturnValue['outputContinueETL']",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "If continueETL with Export",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "If continueETL with Transformation",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@variables('varContinueETL')",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Execute Export Master",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_EXP_00_ExportMaster",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"EntRunId": {
+										"value": "@pipeline().parameters.EntRunId",
+										"type": "Expression"
+									},
+									"EntTriggerTime": {
+										"value": "@pipeline().parameters.EntTriggerTime",
+										"type": "Expression"
+									},
+									"FwkTriggerId": {
+										"value": "@pipeline().parameters.FwkTriggerId",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Log Export Failure To Mattermost",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Execute Export Master",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_LogToMattermost",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Message": "Execution of pipeline 'PL_EXP_01_Export' responsible for data export has failed",
+									"EntRunId": {
+										"value": "@pipeline().parameters.EntRunId",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"EntRunId": {
+				"type": "string"
+			},
+			"EntTriggerTime": {
+				"type": "string"
+			},
+			"FwkTriggerId": {
+				"type": "string"
+			},
+			"FwkLayerId": {
+				"type": "string"
+			},
+			"ADFTriggerName": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"varContinueETL": {
+				"type": "Boolean",
+				"defaultValue": true
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-07-06T08:29:21Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

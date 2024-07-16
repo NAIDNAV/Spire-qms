@@ -1,0 +1,339 @@
+{
+	"name": "PL_ING_01_01_FileMandatorinessCheck",
+	"properties": {
+		"activities": [
+			{
+				"name": "LookupIngtFileCheck",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[dbo].[sps_LookupIngtFileCheck]",
+						"storedProcedureParameters": {
+							"FwkTriggerId": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.FwkTriggerId",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "DS_SQL_Configuration",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ForEachMandatoryInstruction",
+				"description": "Iterates over a dataset and loop by number of rows it gets with the output from ‘LookupIngtFileCheck’ activity.",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "LookupIngtFileCheck",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@array(activity('LookupIngtFileCheck').output.value)",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 30,
+					"activities": [
+						{
+							"name": "Switch_SourceType",
+							"description": "Evaluates the input value ‘SourceType’ corresponding to a case that matches the condition.",
+							"type": "Switch",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"on": {
+									"value": "@string(item().SourceType)",
+									"type": "Expression"
+								},
+								"cases": [
+									{
+										"value": "FileShare",
+										"activities": [
+											{
+												"name": "Execute PL_ING_05_FileShareGetFile",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"policy": {
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "PL_ING_05_FileShareGetFiles",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"FwkItem": {
+															"value": "@item()",
+															"type": "Expression"
+														}
+													}
+												}
+											},
+											{
+												"name": "Append Missing File_FileShare",
+												"type": "AppendVariable",
+												"dependsOn": [
+													{
+														"activity": "Execute PL_ING_05_FileShareGetFile",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"userProperties": [],
+												"typeProperties": {
+													"variableName": "varMissingFileOnPath",
+													"value": {
+														"value": "@if(equals(length(activity('Execute PL_ING_05_FileShareGetFile').output.pipelineReturnValue['outputFileName']), 0), item().Path,'')",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									},
+									{
+										"value": "SFTP",
+										"activities": [
+											{
+												"name": "Execute PL_ING_06_SFTPGetFile",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"policy": {
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "PL_ING_06_SFTPGetFiles",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"FwkItem": {
+															"value": "@item()",
+															"type": "Expression"
+														}
+													}
+												}
+											},
+											{
+												"name": "Append Missing File_SFTP",
+												"type": "AppendVariable",
+												"dependsOn": [
+													{
+														"activity": "Execute PL_ING_06_SFTPGetFile",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"userProperties": [],
+												"typeProperties": {
+													"variableName": "varMissingFileOnPath",
+													"value": {
+														"value": "@if(equals(length(activity('Execute PL_ING_06_SFTPGetFile').output.pipelineReturnValue['outputFileName']), 0), item().Path,'')",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									},
+									{
+										"value": "ADLS",
+										"activities": [
+											{
+												"name": "Execute PL_ING_07_ADLSGetFile",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"policy": {
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "PL_ING_07_ADLSGetFiles",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"FwkItem": {
+															"value": "@item()",
+															"type": "Expression"
+														}
+													}
+												}
+											},
+											{
+												"name": "Append Missing File_ADLS",
+												"type": "AppendVariable",
+												"dependsOn": [
+													{
+														"activity": "Execute PL_ING_07_ADLSGetFile",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"userProperties": [],
+												"typeProperties": {
+													"variableName": "varMissingFileOnPath",
+													"value": {
+														"value": "@if(equals(length(activity('Execute PL_ING_07_ADLSGetFile').output.pipelineReturnValue['outputFileName']), 0), item().Path,'')",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "FilterOfNotExistingFiles",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "ForEachMandatoryInstruction",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@variables('varMissingFileOnPath')",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@not(equals(item(),''))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "IfMissingFilesLogToMattermost",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "SetOutputIsMandatoryMissingFiles",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@empty(activity('FilterOfNotExistingFiles').output.value)",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Log Missing mandatorty files",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_LogToMattermost",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Message": {
+										"value": "@concat('Execution of pipeline ''PL_ING_00_Ingestion'' for FwkTriggerId **', pipeline().parameters.FwkTriggerId,'** will not start because mandatory source file(s) are missing: \\n',replace(replace(replace(string(activity('FilterOfNotExistingFiles').output.value),'[\"','- '), '\"]', ''),'\",\"', '\\n- '))",
+										"type": "Expression"
+									},
+									"EntRunId": {
+										"value": "@pipeline().parameters.EntRunId",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "SetOutputIsMandatoryMissingFiles",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "FilterOfNotExistingFiles",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "pipelineReturnValue",
+					"value": [
+						{
+							"key": "outputIsMissingMandatoryFiles",
+							"value": {
+								"type": "Expression",
+								"content": "@if(empty(activity('FilterOfNotExistingFiles').output.value),'N', 'Y')"
+							}
+						}
+					],
+					"setSystemVariable": true
+				}
+			}
+		],
+		"parameters": {
+			"FwkTriggerId": {
+				"type": "string"
+			},
+			"EntRunId": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"varMissingFileOnPath": {
+				"type": "Array"
+			}
+		},
+		"folder": {
+			"name": "01 Ingestion Module"
+		},
+		"annotations": []
+	}
+}

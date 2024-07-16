@@ -1,0 +1,60 @@
+[
+    {
+        "ParentAttribute": "WK_Address_Identifier",
+        "Child": "CustomerAddress",
+        "ChildAttribute": "WK_Address_Identifier",
+        "KeyType": "PIdentifier"
+    },
+    {
+        "Parent": "Address",
+        "Child": "CustomerAddress",
+        "ChildAttribute": "WK_Address_Identifier",
+        "KeyType": "PIdentifier"
+    },
+    {
+        "Parent": "Address",
+        "ParentAttribute": "WK_Address_Identifier",
+        "ChildAttribute": "WK_Address_Identifier",
+        "KeyType": "PIdentifier"
+    },
+    {
+        "Parent": "Address",
+        "ParentAttribute": "WK_Address_Identifier",
+        "Child": "CustomerAddress",
+        "KeyType": "PIdentifier"
+    },
+    {
+        "Parent": "Address",
+        "ParentAttribute": "WK_Address_Identifier",
+        "Child": "CustomerAddress",
+        "ChildAttribute": "WK_Address_Identifier"
+    },
+    {
+        "Parent": "NotExistingParent",
+        "ParentAttribute": "WK_Address_Identifier",
+        "Child": "CustomerAddress",
+        "ChildAttribute": "WK_Address_Identifier",
+        "KeyType": "PIdentifier"
+    },
+    {
+        "Parent": "Address",
+        "ParentAttribute": "NotExistingParentAttribute",
+        "Child": "CustomerAddress",
+        "ChildAttribute": "WK_Address_Identifier",
+        "KeyType": "PIdentifier"
+    },
+    {
+        "Parent": "Address",
+        "ParentAttribute": "WK_Address_Identifier",
+        "Child": "NotExistingChild",
+        "ChildAttribute": "WK_Address_Identifier",
+        "KeyType": "PIdentifier"
+    },
+    {
+        "Parent": "Address",
+        "ParentAttribute": "WK_Address_Identifier",
+        "Child": "CustomerAddress",
+        "ChildAttribute": "NotExistingChildAttribute",
+        "KeyType": "PIdentifier"
+    }
+]

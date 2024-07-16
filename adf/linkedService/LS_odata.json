@@ -1,0 +1,34 @@
+{
+	"name": "LS_odata",
+	"properties": {
+		"parameters": {
+			"ServiceUrl": {
+				"type": "string"
+			},
+			"UserName": {
+				"type": "string"
+			},
+			"SecretName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "OData",
+		"typeProperties": {
+			"url": "@{linkedService().ServiceUrl}",
+			"authenticationType": "Basic",
+			"userName": "@{linkedService().UserName}",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "LS_keyvault",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": {
+					"value": "@linkedService().SecretName",
+					"type": "Expression"
+				}
+			}
+		}
+	}
+}

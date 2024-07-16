@@ -1,0 +1,200 @@
+[
+    {
+        "Key": "LandingSQLPseudonymization",
+        "Entities": [
+            {
+                "DatabaseName": "Application_MEF_LandingSQL",
+                "EntityName": "Address",
+                "Transformations": [
+                    {
+                        "TransformationType": "Select",
+                        "Params": {
+                            "columns": [
+                                "AddressID",
+                                "AddressLine1",
+                                "AddressLine2",
+                                "PostalCode",
+                                "City",
+                                "StateProvince",
+                                "CountryRegion"
+                            ]
+                        }
+                    },
+                    {
+                        "TransformationType": "Filter",
+                        "Params": {
+                            "condition": "AddressID < 15000"
+                        }
+                    },
+                    {
+                        "TransformationType": "Deduplicate",
+                        "Params": {
+                            "columns": [
+                                "*"
+                            ]
+                        }
+                    },
+                    {
+                        "TransformationType": "ReplaceNull",
+                        "Params": {
+                            "transformationSpecs": [
+                                {
+                                    "column": [
+                                        "AddressLine2"
+                                    ],
+                                    "value": "n/a"
+                                },
+                                {
+                                    "column": [
+                                        "AddressID"
+                                    ],
+                                    "value": -1
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "TransformationType": "Pseudonymization",
+                        "Params": {
+                            "columns": [
+                                "AddressLine1",
+                                "City"
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                "DatabaseName": "Application_MEF_LandingSQL",
+                "EntityName": "Customer",
+                "Transformations": [
+                    {
+                        "TransformationType": "Pseudonymization",
+                        "Params": {
+                            "columns": [
+                                "FirstName",
+                                "MiddleName",
+                                "LastName",
+                                "EmailAddress",
+                                "Phone"
+                            ]
+                        }
+                    }
+                ],
+                "Params": {
+                    "partitionColumns": [
+                        "CompanyName"
+                    ]
+                }
+            },
+            {
+                "DatabaseName": "Application_MEF_LandingSQL",
+                "EntityName": "[*]_Full",
+                "Params": {
+                    "fwkTriggerId": "Weekly"
+                }
+            },
+            {
+                "DatabaseName": "Application_MEF_LandingSQL",
+                "EntityName": "CustomerJoinAddress",
+                "Transformations": [
+                    {
+                        "TransformationType": "Pseudonymization",
+                        "Params": {
+                            "columns": [
+                                "AddressType"
+                            ]
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "Key": "StagingHistorization",
+        "Entities": [
+            {
+                "DatabaseName": "Application_MEF_StagingSQL",
+                "EntityName": "Address",
+                "Params": {
+                    "writeMode": "SCDType2Delta",
+                    "partitionColumns": [
+                        "MGT_isCurrent",
+                        "MGT_isDeleted"
+                    ]
+                }
+            },
+            {
+                "DatabaseName": "Application_MEF_StagingSQL",
+                "EntityName": "Address",
+                "Params": {
+                    "writeMode": "Snapshot",
+                    "keyColumns": [
+                        "AddressID"
+                    ],
+                    "sinkEntityName": "AddressSnapshot"
+                }
+            },
+            {
+                "DatabaseName": "Application_MEF_StagingSQL",
+                "EntityName": "CustomerAddress",
+                "Params": {
+                    "writeMode": "SCDType2Delta",
+                    "partitionColumns": [
+                        "MGT_isCurrent",
+                        "MGT_isDeleted"
+                    ]
+                }
+            },
+            {
+                "DatabaseName": "Application_MEF_StagingSQL",
+                "EntityName": "Customer",
+                "Params": {
+                    "writeMode": "SCDType2Delta",
+                    "partitionColumns": [
+                        "MGT_isCurrent",
+                        "MGT_isDeleted"
+                    ]
+                }
+            },
+            {
+                "DatabaseName": "Application_MEF_StagingSQL",
+                "EntityName": "Customer_Full",
+                "Params": {
+                    "writeMode": "SCDType2Delete",
+                    "sinkEntityName": "Customer",
+                    "fwkTriggerId": "Weekly",
+                    "partitionColumns": [
+                        "MGT_isCurrent",
+                        "MGT_isDeleted"
+                    ]
+                }
+            },
+            {
+                "DatabaseName": "Application_MEF_StagingSQL",
+                "EntityName": "V_Customer",
+                "Params": {
+                    "writeMode": "SCDType1",
+                    "keyColumns": [
+                        "CustomerID"
+                    ],
+                    "sinkEntityName": "CustomerFromView"
+                }
+            },
+            {
+                "DatabaseName": "Application_MEF_StagingSQL",
+                "EntityName": "CustomerJoinAddress",
+                "Params": {
+                    "writeMode": "SCDType2Delta"
+                }
+            },
+            {
+                "DatabaseName": "Application_MEF_StagingOracle",
+                "EntityName": "[*]",
+                "Params": {
+                    "writeMode": "SCDType2Delta"
+                }
+            }
+        ]
+    }
+]

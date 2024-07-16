@@ -1,0 +1,46 @@
+name: CI_CD_DB
+
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'db/**'
+      - '!README.md'
+      - '!.gitignore'
+      - '!LICENSE.md'
+
+env:
+  DOTNET_INSTALL_DIR: "runner/dotnet"
+  CLIENT_ID_DEV: ${{secrets.CLIENT_ID_DB_MEF_DEV}} 
+  CLIENT_SECRET_DEV: ${{secrets.CLIENT_SECRET_DB_MEF_DEV}} 
+  SUBSCRIPTIONID_DEV: ${{secrets.SUBSCRIPTIONID_MEF_DEV}}
+  TENANT_ID: ${{secrets.TENANT_ID}}
+
+  SQL_DB_CONNECTION_STRING_DEV: ${{secrets.SQL_DB_CONNECTION_STRING_MEF_DEV}}
+
+jobs:
+  CI_CD_DB:
+    runs-on: [ azure-runners ]
+    steps:
+      - name: Checkout Scripts
+        uses: actions/checkout@v3.3.0
+
+      - name: Setup dotnet core SDK
+        uses: actions/setup-dotnet@v3.0.3
+        with:
+          dotnet-version: 6.0.x
+      
+      - name: Create DACPAC file
+        run: dotnet build db/mdmf_db.sqlproj -p:NetCoreBuild=true -c Release
+
+      - name: Install SqlPackage
+        run: dotnet tool install -g microsoft.sqlpackage
+
+      - name: Azure LogIn
+        uses: azure/login@v1
+        with:
+          creds: '{"clientId":"${{ env.CLIENT_ID_DEV }}","clientSecret":"${{ env.CLIENT_SECRET_DEV }}","subscriptionId":"${{ env.SUBSCRIPTIONID_DEV }}","tenantId":"${{ env.TENANT_ID }}"}'
+          
+      - name: Sql Deploy
+        run: /home/runner/.dotnet/tools/sqlpackage /Action:Publish /SourceFile:"./db/bin/Release/mdmf_db.dacpac" /TargetConnectionString:"${{ env.SQL_DB_CONNECTION_STRING_DEV }}" /p:BlockOnPossibleDataLoss=false /p:GenerateSmartDefaults=true

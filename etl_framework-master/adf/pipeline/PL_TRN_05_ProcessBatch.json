@@ -1,0 +1,621 @@
+{
+	"name": "PL_TRN_05_ProcessBatch",
+	"properties": {
+		"activities": [
+			{
+				"name": "sp_FwkLogInsert",
+				"description": "Executes the SP spi_FwkLogInsert to insert record into FwkLog table with the execution module information by pipeline id and with null status.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spi_FwkLogInsert]",
+					"storedProcedureParameters": {
+						"EntRunId": {
+							"value": {
+								"value": "@pipeline().parameters.EntRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"Module": {
+							"value": {
+								"value": "@concat('Transformation > ',\n    pipeline().parameters.LayerItem['FwkLayerId'],' Layer > Batch ', pipeline().parameters.BatchItem['BatchNumber']\n)",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"StartDate": {
+							"value": {
+								"value": "@formatdatetime(pipeline().TriggerTime)",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						},
+						"ADFTriggerName": {
+							"value": {
+								"value": "@pipeline().parameters.ADFTriggerName",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_UpdateExecutionLog_succeeded",
+				"description": "Executes the SP spu_FwkLogUpdate to update the record created by the ‘InsertIntoFwkLog’ activity in the table ‘FwkLog’ by updating the columns ‘PipelineStatus’ to ‘Success’.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "ForEachTransformation",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spu_FwkLogUpdate]",
+					"storedProcedureParameters": {
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStatus": {
+							"value": {
+								"value": "Succeeded",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"JobRunUrl": {
+							"value": null,
+							"type": "String"
+						},
+						"ErrorMessage": {
+							"value": null,
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_UpdateExecutionLog_failed",
+				"description": "Executes the SP spu_FwkLogUpdate to update the record created by the ‘InsertIntoFwkLog’ activity in the table ‘FwkLog’ by updating the columns ‘PipelineStatus’ to ‘Success’.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "ForEachTransformation",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spu_FwkLogUpdate]",
+					"storedProcedureParameters": {
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStatus": {
+							"value": {
+								"value": "Failed",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"JobRunUrl": {
+							"value": null,
+							"type": "String"
+						},
+						"ErrorMessage": {
+							"value": null,
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "LookupDtOutput",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "sp_FwkLogInsert",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[dbo].[sps_LookupDtOutput]",
+						"storedProcedureParameters": {
+							"FwkTriggerId": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.BatchItem['FwkTriggerId']",
+									"type": "Expression"
+								}
+							},
+							"FwkLayerId": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.LayerItem['FwkLayerId']",
+									"type": "Expression"
+								}
+							},
+							"BatchNumber": {
+								"type": "Int16",
+								"value": {
+									"value": "@pipeline().parameters.BatchItem['BatchNumber']",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "DS_SQL_Configuration",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ForEachTransformation",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "LookupDtOutput",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@array(activity('LookupDtOutput').output.value)",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 30,
+					"activities": [
+						{
+							"name": "spu_DtLogUpdate_succeeded",
+							"description": "Executes the SP spu_DtLogUpdate to update record into DtLog table with the execution module information.",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "DT_RunTransformationNotebook",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[spu_DtLogUpdate]",
+								"storedProcedureParameters": {
+									"DtOutputId": {
+										"value": {
+											"value": "@item().DtOutputId",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"EntRunId": {
+										"value": {
+											"value": "@pipeline().parameters.EntRunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"ModuleRunId": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"PipelineStatus": {
+										"value": {
+											"value": "Succeeded",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Duration": {
+										"value": {
+											"value": "@activity('DT_RunTransformationNotebook').output.runOutput['duration']",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"JobRunUrl": {
+										"value": {
+											"value": "@activity('DT_RunTransformationNotebook').output.runPageUrl",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"RecordsInserted": {
+										"value": {
+											"value": "@activity('DT_RunTransformationNotebook').output.runOutput['recordsInserted']",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"RecordsUpdated": {
+										"value": {
+											"value": "@activity('DT_RunTransformationNotebook').output.runOutput['recordsUpdated']",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"RecordsDeleted": {
+										"value": {
+											"value": "@activity('DT_RunTransformationNotebook').output.runOutput['recordsDeleted']",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_configurationDB",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "spu_DtLogUpdate_failed",
+							"description": "Executes the SP spu_DtLogUpdate to update record into DtLog table with the execution module information.",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "DT_RunTransformationNotebook",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[spu_DtLogUpdate]",
+								"storedProcedureParameters": {
+									"DtOutputId": {
+										"value": {
+											"value": "@item().DtOutputId",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"EntRunId": {
+										"value": {
+											"value": "@pipeline().parameters.EntRunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"ModuleRunId": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"PipelineStatus": {
+										"value": {
+											"value": "Failed",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Duration": {
+										"value": null,
+										"type": "Int32"
+									},
+									"JobRunUrl": {
+										"value": {
+											"value": "@activity('DT_RunTransformationNotebook').output.runPageUrl",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"RecordsInserted": {
+										"value": null,
+										"type": "Int64"
+									},
+									"RecordsUpdated": {
+										"value": null,
+										"type": "Int64"
+									},
+									"RecordsDeleted": {
+										"value": null,
+										"type": "Int64"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_configurationDB",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "DT_RunTransformationNotebook",
+							"type": "DatabricksNotebook",
+							"dependsOn": [
+								{
+									"activity": "spi_DtLogInsert",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": "/Code/mdmf/etl/transformation",
+								"baseParameters": {
+									"DataTransformationParameters": {
+										"value": "@string(item())",
+										"type": "Expression"
+									},
+									"EntTriggerTime": {
+										"value": "@convertToUtc(pipeline().parameters.EntTriggerTime, 'UTC', 'yyyy-MM-ddTHH:mm:ss')",
+										"type": "Expression"
+									},
+									"EntRunId": {
+										"value": "@pipeline().parameters.EntRunId",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_databricks",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"ClusterId": {
+										"value": "@pipeline().parameters.LayerItem['ClusterId']",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "spi_DtLogInsert",
+							"description": "Executes the SP spi_DtLogInsert to insert record into DtLog table with the execution module information.",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[spi_DtLogInsert]",
+								"storedProcedureParameters": {
+									"DtOutputId": {
+										"value": {
+											"value": "@item().DtOutputId",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"EntRunId": {
+										"value": {
+											"value": "@pipeline().parameters.EntRunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"ModuleRunId": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"PipelineStatus": {
+										"value": {
+											"value": "InProgress",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"StartDate": {
+										"value": {
+											"value": "@formatdatetime(pipeline().TriggerTime)",
+											"type": "Expression"
+										},
+										"type": "Datetime"
+									},
+									"Duration": {
+										"value": null,
+										"type": "Int32"
+									},
+									"JobRunUrl": {
+										"value": null,
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_configurationDB",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "setOutputStopBatchOnFailure",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "sp_UpdateExecutionLog_failed",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "pipelineReturnValue",
+					"value": [
+						{
+							"key": "outputStopETL",
+							"value": {
+								"type": "Expression",
+								"content": "@if(\n    equals(\n        toUpper(string(pipeline().parameters.LayerItem['StopBatchIfFailure'])),\n         'TRUE'\n    ), \n    true,\n    false\n)"
+							}
+						}
+					],
+					"setSystemVariable": true
+				}
+			},
+			{
+				"name": "setOutputStopBatch",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "sp_UpdateExecutionLog_succeeded",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "pipelineReturnValue",
+					"value": [
+						{
+							"key": "outputStopETL",
+							"value": {
+								"type": "Boolean",
+								"content": false
+							}
+						}
+					],
+					"setSystemVariable": true
+				}
+			}
+		],
+		"parameters": {
+			"BatchItem": {
+				"type": "array"
+			},
+			"LayerItem": {
+				"type": "array"
+			},
+			"EntRunId": {
+				"type": "string"
+			},
+			"EntTriggerTime": {
+				"type": "string"
+			},
+			"DtOrderItem": {
+				"type": "array"
+			},
+			"ADFTriggerName": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "02 Transformation Module"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-07-06T08:29:13Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

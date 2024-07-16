@@ -1,0 +1,24 @@
+[
+    {
+        "KeyType": "PIdentifier",
+        "Attribute": "WK_Address_Identifier"
+    },
+    {
+        "Entity": "Address",
+        "Attribute": "WK_Address_Identifier"
+    },
+    {
+        "Entity": "Address",
+        "KeyType": "PIdentifier"
+    },
+    {
+        "Entity": "NotExistingEnity",
+        "KeyType": "PIdentifier",
+        "Attribute": "WK_Address_Identifier"
+    },
+    {
+        "Entity": "Address",
+        "KeyType": "PIdentifier",
+        "Attribute": "NotExistingAttribute"
+    }
+]

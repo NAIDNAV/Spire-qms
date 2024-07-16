@@ -1,0 +1,13 @@
+{
+	"name": "SHIR",
+	"properties": {
+		"type": "SelfHosted",
+		"description": "Express-route connection set",
+		"typeProperties": {
+			"linkedInfo": {
+				"resourceId": "/subscriptions/5c9d5542-5f6e-425f-a7b4-edc59c9f83a0/resourcegroups/dev-rg-hub-shir-emea/providers/Microsoft.DataFactory/factories/dev-adf-hub-emea/integrationruntimes/dev-adf-shir-hub-emea",
+				"authorizationType": "Rbac"
+			}
+		}
+	}
+}

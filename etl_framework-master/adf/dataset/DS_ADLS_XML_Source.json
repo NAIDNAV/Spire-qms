@@ -1,0 +1,56 @@
+{
+	"name": "DS_ADLS_XML_Source",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_adls",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"InstanceURL": {
+					"value": "@dataset().FwkItem['InstanceURL']",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"FwkItem": {
+				"type": "array"
+			},
+			"ds_inputFileName": {
+				"type": "string"
+			},
+			"ds_inputFilePath": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "01 Ingestion Module DS"
+		},
+		"annotations": [],
+		"type": "Xml",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@dataset().ds_inputFileName",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@replace(concat('$', dataset().ds_inputFilePath), concat('$', split(dataset().ds_inputFilePath, '/')[0], '/'), '')",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "@split(dataset().ds_inputFilePath, '/')[0]",
+					"type": "Expression"
+				}
+			},
+			"encodingName": {
+				"value": "@json(dataset().FwkItem['Params']).encodingName",
+				"type": "Expression"
+			},
+			"nullValue": {
+				"value": "@json(dataset().FwkItem['Params']).nullValue",
+				"type": "Expression"
+			}
+		}
+	}
+}

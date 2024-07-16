@@ -1,0 +1,277 @@
+{
+	"name": "PL_COG_02_PopulateConfigTable_UpdateInsert",
+	"properties": {
+		"activities": [
+			{
+				"name": "Copy Parquet to SQL Configuration DB",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "sp_FwkLogInsert",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "ParquetSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"wildcardFileName": "*.parquet",
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "ParquetReadSettings"
+						}
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"preCopyScript": {
+							"value": "@{concat(\n    'UPDATE ',\n    pipeline().parameters.FolderName,\n    ' SET LastUpdate = CAST(''', utcNow(),''' AS DATETIME2), ActiveFlag = ''N'' WHERE ActiveFlag = ''Y'' AND (FwkSourceEntityId ',\n    if(pipeline().parameters.MetadataProcessing, 'LIKE ''sys.%'')', 'IS NULL OR FwkSourceEntityId NOT LIKE ''sys.%'')')\n)}",
+							"type": "Expression"
+						},
+						"writeBehavior": "insert",
+						"sqlWriterUseTableLock": false,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "DS_Parquet_Configuration",
+						"type": "DatasetReference",
+						"parameters": {
+							"InstanceURL": {
+								"value": "@pipeline().parameters.InstanceURL",
+								"type": "Expression"
+							},
+							"FullPath": {
+								"value": "@pipeline().parameters.FullPath",
+								"type": "Expression"
+							},
+							"FolderName": {
+								"value": "@pipeline().parameters.FolderName",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "DS_SQL_Configuration_all",
+						"type": "DatasetReference",
+						"parameters": {
+							"FileName": {
+								"value": "@{pipeline().parameters.FolderName}",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "sp_FwkLogInsert",
+				"description": "Executes the SP spi_FwkLogInsert to insert record into FwkLog table with the execution module information by pipeline id and with null status.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spi_FwkLogInsert]",
+					"storedProcedureParameters": {
+						"EntRunId": {
+							"value": {
+								"value": "@pipeline().parameters.EntRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"Module": {
+							"value": {
+								"value": "@concat('Config Generation > ', pipeline().parameters.FolderName)",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"StartDate": {
+							"value": {
+								"value": "@formatdatetime(pipeline().TriggerTime)",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						},
+						"ADFTriggerName": {
+							"value": null,
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_UpdateExecutionLog_succeeded",
+				"description": "Executes the SP spu_FwkLogUpdate to update the record created by the ‘InsertIntoFwkLog’ activity in the table ‘FwkLog’ by updating the columns ‘PipelineStatus’ to ‘Success’.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Copy Parquet to SQL Configuration DB",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spu_FwkLogUpdate]",
+					"storedProcedureParameters": {
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStatus": {
+							"value": {
+								"value": "@if(greater(activity('Copy Parquet to SQL Configuration DB').output.rowsCopied, 0), 'Succeeded', 'Skipped')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"JobRunUrl": {
+							"value": null,
+							"type": "String"
+						},
+						"ErrorMessage": {
+							"value": null,
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_UpdateExecutionLog_failed",
+				"description": "Executes the SP spu_FwkLogUpdate to update the record created by the ‘InsertIntoFwkLog’ activity in the table ‘FwkLog’ by updating the columns ‘PipelineStatus’ to ‘Success’.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Copy Parquet to SQL Configuration DB",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spu_FwkLogUpdate]",
+					"storedProcedureParameters": {
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStatus": {
+							"value": {
+								"value": "Failed",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"JobRunUrl": {
+							"value": null,
+							"type": "String"
+						},
+						"ErrorMessage": {
+							"value": {
+								"value": "@if(\n    and(\n        contains(activity('Copy Parquet to SQL Configuration DB').output, 'errors'),\n        greater(length(activity('Copy Parquet to SQL Configuration DB').output.errors), 0)\n    ),\n    activity('Copy Parquet to SQL Configuration DB').output.errors[0].Message,\n    null\n)",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"InstanceURL": {
+				"type": "string"
+			},
+			"FullPath": {
+				"type": "string"
+			},
+			"FolderName": {
+				"type": "string"
+			},
+			"EntRunId": {
+				"type": "string"
+			},
+			"MetadataProcessing": {
+				"type": "bool"
+			}
+		},
+		"folder": {
+			"name": "00 Config Generator Module"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-07-06T08:29:14Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

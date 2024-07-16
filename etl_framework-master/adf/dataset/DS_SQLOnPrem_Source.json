@@ -1,0 +1,37 @@
+{
+	"name": "DS_SQLOnPrem_Source",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_sqlonpremdatabase",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"SecretName": {
+					"value": "@dataset().FwkItem['SecretName']",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"FwkItem": {
+				"type": "array"
+			}
+		},
+		"folder": {
+			"name": "01 Ingestion Module DS"
+		},
+		"annotations": [],
+		"type": "SqlServerTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": {
+				"value": "@dataset().FwkItem['SchemaName']",
+				"type": "Expression"
+			},
+			"table": {
+				"value": "@dataset().FwkItem['EntityName']",
+				"type": "Expression"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

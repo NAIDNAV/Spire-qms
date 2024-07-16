@@ -1,0 +1,38 @@
+{
+	"name": "DS_ADLS_BIN_File_Export",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_adls",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"InstanceURL": {
+					"value": "@dataset().InstanceURL",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"InstanceURL": {
+				"type": "string"
+			},
+			"FullPath": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "03 Export Module DS"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@dataset().FullPath",
+					"type": "Expression"
+				}
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

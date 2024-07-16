@@ -1,0 +1,708 @@
+{
+	"name": "PL_ING_07_03_ADLSXMLLoad",
+	"properties": {
+		"activities": [
+			{
+				"name": "IF archivePath Defined",
+				"description": "if the archive path is defined then copy source file with timestamp prefix to archive folder",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "If Logging Required",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@empty(pipeline().parameters.FwkItem['ArchivePath'])",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Execute FileArchival",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_ING_07_99_Archive",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"FwkItem": {
+										"value": "@pipeline().parameters.FwkItem",
+										"type": "Expression"
+									},
+									"PL_01TriggerTime": {
+										"value": "@pipeline().parameters.PL_01TriggerTime",
+										"type": "Expression"
+									},
+									"FilePath": {
+										"value": "@pipeline().parameters.FilePath",
+										"type": "Expression"
+									},
+									"FileName": {
+										"value": "@pipeline().parameters.FileName",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "If Logging Required",
+				"type": "IfCondition",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@if(and(contains(json(pipeline().parameters.FwkItem['Params']), 'logSettingsInstanceURL'), contains(json(pipeline().parameters.FwkItem['Params']), 'logSettingsPath')), true, false)",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "FullLoadCopyWithoutLogging",
+							"description": "Copy a table from a database to the configurated Sink dynamically taking by input FwkItem, SrcPath.",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "XmlSource",
+									"additionalColumns": {
+										"type": "Expression",
+										"value": "@if(\n    contains(json(pipeline().parameters.FwkItem['Params']), 'additionalColumns'),\n    json(pipeline().parameters.FwkItem['Params']).additionalColumns,\n    json('[]')\n)"
+									},
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "XmlReadSettings",
+										"validationMode": "none",
+										"detectDataType": true,
+										"namespaces": false
+									}
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"enableSkipIncompatibleRow": {
+									"value": "@if(contains(json(pipeline().parameters.FwkItem['Params']), 'enableSkipIncompatibleRow'), json(pipeline().parameters.FwkItem['Params']).enableSkipIncompatibleRow, false)",
+									"type": "Expression"
+								},
+								"translator": {
+									"value": "@if(\n    contains(json(pipeline().parameters.FwkItem['Params']), 'mapping'),\n    json(pipeline().parameters.FwkItem['Params']).mapping,\n    '\"mapping\":{}'\n)",
+									"type": "Expression"
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "DS_ADLS_XML_Source",
+									"type": "DatasetReference",
+									"parameters": {
+										"FwkItem": {
+											"value": "@pipeline().parameters.FwkItem",
+											"type": "Expression"
+										},
+										"ds_inputFileName": {
+											"value": "@pipeline().parameters.FileName",
+											"type": "Expression"
+										},
+										"ds_inputFilePath": {
+											"value": "@pipeline().parameters.FilePath",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DS_ADLS_PRQ_Sink",
+									"type": "DatasetReference",
+									"parameters": {
+										"InstanceURL": {
+											"value": "@pipeline().parameters.FwkItem['SinkInstanceURL']",
+											"type": "Expression"
+										},
+										"FullPath": {
+											"value": "@concat(pipeline().parameters.FwkItem['SinkPath'], \n\t'/',\n\tformatDateTime(pipeline().parameters.PL_01TriggerTime,'yyyy'),\n\tformatDateTime(pipeline().parameters.PL_01TriggerTime,'MM'),\n\tformatDateTime(pipeline().parameters.PL_01TriggerTime,'dd'),\n\tformatDateTime(pipeline().parameters.PL_01TriggerTime,'HH'),\n\tformatDateTime(pipeline().parameters.PL_01TriggerTime,'mm'),\n\t'_',\n\tpipeline().parameters.FwkItem['EntityName'],\n\t'.snappy.parquet'\n)",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "spu_IngtLogUpdate_succeeded2",
+							"description": "Executes the SP spu_IngtLogUpdate to update record into IngtLog table with the execution module information.",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "FullLoadCopyWithoutLogging",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[spu_IngtLogUpdate]",
+								"storedProcedureParameters": {
+									"IngtOutputId": {
+										"value": {
+											"value": "@pipeline().parameters.FwkItem['IngtOutputId']",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"EntRunId": {
+										"value": {
+											"value": "@pipeline().parameters.EntRunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"ModuleRunId": {
+										"value": {
+											"value": "@pipeline().parameters.ModuleRunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"PipelineStatus": {
+										"value": {
+											"value": "Succeeded",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"RowsRead": {
+										"value": {
+											"value": "@if(\n    contains(activity('FullLoadCopyWithoutLogging').output, 'rowsRead'),\n    activity('FullLoadCopyWithoutLogging').output.rowsRead,\n    null\n)",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"RowsCopied": {
+										"value": {
+											"value": "@if(\n    contains(activity('FullLoadCopyWithoutLogging').output, 'rowsCopied'),\n    activity('FullLoadCopyWithoutLogging').output.rowsCopied,\n    null\n)",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"CopyDuration": {
+										"value": {
+											"value": "@if(\n    contains(activity('FullLoadCopyWithoutLogging').output, 'copyDuration'),\n    activity('FullLoadCopyWithoutLogging').output.copyDuration,\n    null\n)",
+											"type": "Expression"
+										},
+										"type": "Double"
+									},
+									"Throughput": {
+										"value": {
+											"value": "@if(\n    contains(activity('FullLoadCopyWithoutLogging').output, 'throughput'),\n    activity('FullLoadCopyWithoutLogging').output.throughput,\n    null\n)",
+											"type": "Expression"
+										},
+										"type": "Double"
+									},
+									"ErrorMessage": {
+										"value": null,
+										"type": "String"
+									},
+									"RowsSkipped": {
+										"value": {
+											"value": "@if(\n    contains(activity('FullLoadCopyWithoutLogging').output, 'rowsSkipped'),\n    activity('FullLoadCopyWithoutLogging').output.rowsSkipped,\n    null\n)",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"LogFilePath": {
+										"value": null,
+										"type": "String"
+									},
+									"FileName": {
+										"value": {
+											"value": "@if(contains(pipeline().parameters.FwkItem['Path'], '*'), pipeline().parameters.FileName, null)",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_configurationDB",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "spu_IngtLogUpdate_failed2",
+							"description": "Executes the SP spu_IngtLogUpdate to update record into IngtLog table with the execution module information.",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "FullLoadCopyWithoutLogging",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[spu_IngtLogUpdate]",
+								"storedProcedureParameters": {
+									"IngtOutputId": {
+										"value": {
+											"value": "@pipeline().parameters.FwkItem['IngtOutputId']",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"EntRunId": {
+										"value": {
+											"value": "@pipeline().parameters.EntRunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"ModuleRunId": {
+										"value": {
+											"value": "@pipeline().parameters.ModuleRunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"PipelineStatus": {
+										"value": {
+											"value": "Failed",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"RowsRead": {
+										"value": null,
+										"type": "Int64"
+									},
+									"RowsCopied": {
+										"value": null,
+										"type": "Int64"
+									},
+									"CopyDuration": {
+										"value": null,
+										"type": "Double"
+									},
+									"Throughput": {
+										"value": null,
+										"type": "Double"
+									},
+									"ErrorMessage": {
+										"value": {
+											"value": "@if(\n    and(\n        contains(activity('FullLoadCopyWithoutLogging').output, 'errors'),\n        greater(length(activity('FullLoadCopyWithoutLogging').output.errors), 0)\n    ),\n    activity('FullLoadCopyWithoutLogging').output.errors[0].Message,\n    null\n)",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"RowsSkipped": {
+										"value": {
+											"value": "@if(\n    contains(activity('FullLoadCopyWithoutLogging').output, 'rowsSkipped'),\n    activity('FullLoadCopyWithoutLogging').output.rowsSkipped,\n    null\n)",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"LogFilePath": {
+										"value": null,
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_configurationDB",
+								"type": "LinkedServiceReference"
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "FullLoadCopyWithLogging",
+							"description": "Copy a table from a database to the configurated Sink dynamically taking by input FwkItem, SrcPath.",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "XmlSource",
+									"additionalColumns": {
+										"type": "Expression",
+										"value": "@if(\n    contains(json(pipeline().parameters.FwkItem['Params']), 'additionalColumns'),\n    json(pipeline().parameters.FwkItem['Params']).additionalColumns,\n    json('[]')\n)"
+									},
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "XmlReadSettings",
+										"validationMode": "none",
+										"detectDataType": true,
+										"namespaces": false
+									}
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"enableSkipIncompatibleRow": {
+									"value": "@if(contains(json(pipeline().parameters.FwkItem['Params']), 'enableSkipIncompatibleRow'), json(pipeline().parameters.FwkItem['Params']).enableSkipIncompatibleRow, false)",
+									"type": "Expression"
+								},
+								"logSettings": {
+									"enableCopyActivityLog": true,
+									"copyActivityLogSettings": {
+										"logLevel": "Warning",
+										"enableReliableLogging": false
+									},
+									"logLocationSettings": {
+										"linkedServiceName": {
+											"referenceName": "LS_adls",
+											"type": "LinkedServiceReference",
+											"parameters": {
+												"InstanceURL": {
+													"value": "@json(pipeline().parameters.FwkItem['Params']).logSettingsInstanceURL",
+													"type": "Expression"
+												}
+											}
+										},
+										"path": {
+											"value": "@json(pipeline().parameters.FwkItem['Params']).logSettingsPath",
+											"type": "Expression"
+										}
+									}
+								},
+								"translator": {
+									"value": "@if(\n    contains(json(pipeline().parameters.FwkItem['Params']), 'mapping'),\n    json(pipeline().parameters.FwkItem['Params']).mapping,\n    '\"mapping\":{}'\n)",
+									"type": "Expression"
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "DS_ADLS_XML_Source",
+									"type": "DatasetReference",
+									"parameters": {
+										"FwkItem": {
+											"value": "@pipeline().parameters.FwkItem",
+											"type": "Expression"
+										},
+										"ds_inputFileName": {
+											"value": "@pipeline().parameters.FileName",
+											"type": "Expression"
+										},
+										"ds_inputFilePath": {
+											"value": "@pipeline().parameters.FilePath",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DS_ADLS_PRQ_Sink",
+									"type": "DatasetReference",
+									"parameters": {
+										"InstanceURL": {
+											"value": "@pipeline().parameters.FwkItem['SinkInstanceURL']",
+											"type": "Expression"
+										},
+										"FullPath": {
+											"value": "@concat(pipeline().parameters.FwkItem['SinkPath'], \n\t'/',\n\tformatDateTime(pipeline().parameters.PL_01TriggerTime,'yyyy'),\n\tformatDateTime(pipeline().parameters.PL_01TriggerTime,'MM'),\n\tformatDateTime(pipeline().parameters.PL_01TriggerTime,'dd'),\n\tformatDateTime(pipeline().parameters.PL_01TriggerTime,'HH'),\n\tformatDateTime(pipeline().parameters.PL_01TriggerTime,'mm'),\n\t'_',\n\tpipeline().parameters.FwkItem['EntityName'],\n\t'.snappy.parquet'\n)",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "spu_IngtLogUpdate_succeeded",
+							"description": "Executes the SP spu_IngtLogUpdate to update record into IngtLog table with the execution module information.",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "FullLoadCopyWithLogging",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[spu_IngtLogUpdate]",
+								"storedProcedureParameters": {
+									"IngtOutputId": {
+										"value": {
+											"value": "@pipeline().parameters.FwkItem['IngtOutputId']",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"EntRunId": {
+										"value": {
+											"value": "@pipeline().parameters.EntRunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"ModuleRunId": {
+										"value": {
+											"value": "@pipeline().parameters.ModuleRunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"PipelineStatus": {
+										"value": {
+											"value": "Succeeded",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"RowsRead": {
+										"value": {
+											"value": "@if(\n    contains(activity('FullLoadCopyWithLogging').output, 'rowsRead'),\n    activity('FullLoadCopyWithLogging').output.rowsRead,\n    null\n)",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"RowsCopied": {
+										"value": {
+											"value": "@if(\n    contains(activity('FullLoadCopyWithLogging').output, 'rowsCopied'),\n    activity('FullLoadCopyWithLogging').output.rowsCopied,\n    null\n)",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"CopyDuration": {
+										"value": {
+											"value": "@if(\n    contains(activity('FullLoadCopyWithLogging').output, 'copyDuration'),\n    activity('FullLoadCopyWithLogging').output.copyDuration,\n    null\n)",
+											"type": "Expression"
+										},
+										"type": "Double"
+									},
+									"Throughput": {
+										"value": {
+											"value": "@if(\n    contains(activity('FullLoadCopyWithLogging').output, 'throughput'),\n    activity('FullLoadCopyWithLogging').output.throughput,\n    null\n)",
+											"type": "Expression"
+										},
+										"type": "Double"
+									},
+									"ErrorMessage": {
+										"value": null,
+										"type": "String"
+									},
+									"RowsSkipped": {
+										"value": {
+											"value": "@if(\n    contains(activity('FullLoadCopyWithLogging').output, 'rowsSkipped'),\n    activity('FullLoadCopyWithLogging').output.rowsSkipped,\n    null\n)",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"LogFilePath": {
+										"value": {
+											"value": "@if(\n    contains(activity('FullLoadCopyWithLogging').output, 'logFilePath'),\n    activity('FullLoadCopyWithLogging').output.logFilePath,\n    null\n)",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"FileName": {
+										"value": {
+											"value": "@if(contains(pipeline().parameters.FwkItem['Path'], '*'), pipeline().parameters.FileName, null)",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_configurationDB",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "spu_IngtLogUpdate_failed",
+							"description": "Executes the SP spu_IngtLogUpdate to update record into IngtLog table with the execution module information.",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "FullLoadCopyWithLogging",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[spu_IngtLogUpdate]",
+								"storedProcedureParameters": {
+									"IngtOutputId": {
+										"value": {
+											"value": "@pipeline().parameters.FwkItem['IngtOutputId']",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"EntRunId": {
+										"value": {
+											"value": "@pipeline().parameters.EntRunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"ModuleRunId": {
+										"value": {
+											"value": "@pipeline().parameters.ModuleRunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"PipelineStatus": {
+										"value": {
+											"value": "Failed",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"RowsRead": {
+										"value": null,
+										"type": "Int64"
+									},
+									"RowsCopied": {
+										"value": null,
+										"type": "Int64"
+									},
+									"CopyDuration": {
+										"value": null,
+										"type": "Double"
+									},
+									"Throughput": {
+										"value": null,
+										"type": "Double"
+									},
+									"ErrorMessage": {
+										"value": {
+											"value": "@if(\n    and(\n        contains(activity('FullLoadCopyWithLogging').output, 'errors'),\n        greater(length(activity('FullLoadCopyWithLogging').output.errors), 0)\n    ),\n    activity('FullLoadCopyWithLogging').output.errors[0].Message,\n    null\n)",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"RowsSkipped": {
+										"value": {
+											"value": "@if(\n    contains(activity('FullLoadCopyWithLogging').output, 'rowsSkipped'),\n    activity('FullLoadCopyWithLogging').output.rowsSkipped,\n    null\n)",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"LogFilePath": {
+										"value": {
+											"value": "@if(\n    contains(activity('FullLoadCopyWithLogging').output, 'logFilePath'),\n    activity('FullLoadCopyWithLogging').output.logFilePath,\n    null\n)",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_configurationDB",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"FwkItem": {
+				"type": "array"
+			},
+			"EntRunId": {
+				"type": "string"
+			},
+			"ModuleRunId": {
+				"type": "string"
+			},
+			"FileName": {
+				"type": "string"
+			},
+			"FilePath": {
+				"type": "string"
+			},
+			"PL_01TriggerTime": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "01 Ingestion Module/07 ADLS"
+		},
+		"annotations": []
+	}
+}

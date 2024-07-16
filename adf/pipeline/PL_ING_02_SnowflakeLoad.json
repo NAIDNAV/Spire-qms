@@ -1,0 +1,114 @@
+{
+	"name": "PL_ING_02_SnowflakeLoad",
+	"properties": {
+		"activities": [
+			{
+				"name": "If is FullLoad",
+				"description": "Evaluates the ‘LoadType’ and go in case it matches.",
+				"type": "IfCondition",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(pipeline().parameters.FwkItem['TypeLoad'], 'Full')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Execute PL_ING_08_02_SnowflakeDeltaLoad",
+							"description": "This pipeline is used to execute all the inner activities that are included in the ingestion module.",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_ING_08_02_SnowflakeDeltaLoad",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"FwkItem": {
+										"value": "@pipeline().parameters.FwkItem",
+										"type": "Expression"
+									},
+									"PL_01TriggerTime": {
+										"value": "@pipeline().parameters.PL_01TriggerTime",
+										"type": "Expression"
+									},
+									"EntRunId": {
+										"value": "@pipeline().parameters.EntRunId",
+										"type": "Expression"
+									},
+									"ModuleRunId": {
+										"value": "@pipeline().parameters.ModuleRunId",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Execute PL_ING_08_01_SnowflakeFullLoad",
+							"description": "This pipeline is used to execute all the inner activities that are included in the ingestion module.",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_ING_08_01_SnowflakeFullLoad",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"FwkItem": {
+										"value": "@pipeline().parameters.FwkItem",
+										"type": "Expression"
+									},
+									"PL_01TriggerTime": {
+										"value": "@pipeline().parameters.PL_01TriggerTime",
+										"type": "Expression"
+									},
+									"EntRunId": {
+										"value": "@pipeline().parameters.EntRunId",
+										"type": "Expression"
+									},
+									"ModuleRunId": {
+										"value": "@pipeline().parameters.ModuleRunId",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"FwkItem": {
+				"type": "array"
+			},
+			"PL_01TriggerTime": {
+				"type": "string"
+			},
+			"EntRunId": {
+				"type": "string"
+			},
+			"ModuleRunId": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "01 Ingestion Module/08 Snowflake"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-07-06T08:29:15Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

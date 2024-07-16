@@ -1,0 +1,50 @@
+[
+    {
+        "ADFTriggerName": "Sandbox",
+        "Workflows": [
+            {
+                "URL": "https://prod-108.westeurope.logic.azure.com:443/workflows/719eb69ecfde41e98f78b1d50087575d/triggers/manual/paths/invoke?api-version=2016-06-01",
+                "RequestBody": {
+                    "Approval_Email_Address": "burak.duran@mercedes-benz.com",
+                    "ADFTriggerName": "Sandbox",
+                    "FwkLayerId": "SDM"
+                }
+            },
+            {
+                "WorkflowId": "URL_Mandatory",
+                "RequestBody": {
+                    "Approval_Email_Address": "burak.duran@mercedes-benz.com",
+                    "ADFTriggerName": "Sandbox",
+                    "FwkLayerId": "SDM"
+                }
+            },
+            {
+                "WorkflowId": "RequestBody_Mandatory",
+                "URL": "https://prod-108.westeurope.logic.azure.com:443/workflows/719eb69ecfde41e98f78b1d50087575d/triggers/manual/paths/invoke?api-version=2016-06-01"
+            },
+            {
+                "WorkflowId": "RequestBody_NotValidJSON",
+                "URL": "https://prod-108.westeurope.logic.azure.com:443/workflows/719eb69ecfde41e98f78b1d50087575d/triggers/manual/paths/invoke?api-version=2016-06-01",
+                "RequestBody": "not valid JSON"
+            },
+            {
+                "WorkflowId": "Duplicates",
+                "URL": "https://prod-108.westeurope.logic.azure.com:443/workflows/719eb69ecfde41e98f78b1d50087575d/triggers/manual/paths/invoke?api-version=2016-06-01",
+                "RequestBody": {
+                    "Approval_Email_Address": "burak.duran@mercedes-benz.com",
+                    "ADFTriggerName": "Sandbox",
+                    "FwkLayerId": "SDM"
+                }
+            },
+            {
+                "WorkflowId": "Duplicates",
+                "URL": "https://prod-108.westeurope.logic.azure.com:443/workflows/719eb69ecfde41e98f78b1d50087575d/triggers/manual/paths/invoke?api-version=2016-06-01",
+                "RequestBody": {
+                    "Approval_Email_Address": "burak.duran@mercedes-benz.com",
+                    "ADFTriggerName": "Sandbox",
+                    "FwkLayerId": "Dimensional"
+                }
+            }
+        ]
+    }
+]

@@ -1,0 +1,43 @@
+{
+	"name": "DS_SFTP_Binary_Target",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_sftp",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"InstanceURL": {
+					"value": "@dataset().FwkItem['SinkInstanceURL']",
+					"type": "Expression"
+				},
+				"UserName": {
+					"value": "@dataset().FwkItem['UserName']",
+					"type": "Expression"
+				},
+				"SecretName": {
+					"value": "@dataset().FwkItem['SecretName']",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"FwkItem": {
+				"type": "array"
+			}
+		},
+		"folder": {
+			"name": "03 Export Module DS"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "SftpLocation",
+				"fileName": {
+					"value": "@dataset().FwkItem['SinkPath']",
+					"type": "Expression"
+				}
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

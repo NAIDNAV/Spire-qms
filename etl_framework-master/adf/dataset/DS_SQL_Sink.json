@@ -1,0 +1,34 @@
+{
+	"name": "DS_SQL_Sink",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_sqldatabase",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"SecretName": "@dataset().FwkItem['SecretName']"
+			}
+		},
+		"parameters": {
+			"FwkItem": {
+				"type": "array"
+			}
+		},
+		"folder": {
+			"name": "03 Export Module DS"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": {
+				"value": "@dataset().FwkItem['SinkSchemaName']",
+				"type": "Expression"
+			},
+			"table": {
+				"value": "@dataset().FwkItem['SinkEntityName']",
+				"type": "Expression"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

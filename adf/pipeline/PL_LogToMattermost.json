@@ -1,0 +1,53 @@
+{
+	"name": "PL_LogToMattermost",
+	"properties": {
+		"activities": [
+			{
+				"name": "Call Mattermost Webhook",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@pipeline().parameters.MatterMostWebHookURL",
+						"type": "Expression"
+					},
+					"method": "POST",
+					"body": {
+						"value": "@concat(\n    '{\"channel\":\"',\n    pipeline().parameters.Channel,\n    '\",\"text\":\"Alert from ADF **',\n    pipeline().DataFactory,\n    '** for EntRunId **',\n    pipeline().parameters.EntRunId,\n    '**: ',\n    pipeline().parameters.Message,\n    '\"}'\n)",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"Message": {
+				"type": "string"
+			},
+			"Channel": {
+				"type": "string",
+				"defaultValue": "mobi-coreteam"
+			},
+			"EntRunId": {
+				"type": "string"
+			},
+			"MatterMostWebHookURL": {
+				"type": "string",
+				"defaultValue": "https://matter.i.mercedes-benz.com/hooks/i5h8ns4trigb5c6ipkwrk314br"
+			}
+		},
+		"folder": {
+			"name": "99 Utils"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-07-06T08:29:09Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

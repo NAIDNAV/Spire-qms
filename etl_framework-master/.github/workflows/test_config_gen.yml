@@ -1,0 +1,84 @@
+name: Config Gen Type
+
+on:
+  pull_request:
+    branches:
+      - mobcore-000
+
+env:
+  generate_config_parameter: "Full"
+
+jobs:
+  config_gen:
+    runs-on: [ azure-runners ]
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Deploying the Notebooks
+        run: echo "Deployed the notebooks to the Databricks"
+
+      - name: Deploying the Resources
+        run: echo "Deployed the Resources to the Databricks"
+
+      - name: Base SHA
+        id: base_sha
+        run: echo "sha=$(git rev-parse origin/master)" >> $GITHUB_OUTPUT
+
+      - name: Get Changed Directories
+        id: changed_folders_files
+        uses: tj-actions/changed-files@v35
+        with:
+            base_sha: "${{ steps.base_sha.outputs.sha }}"
+
+      - name: List all changed files
+        run: |
+          for file in ${{ steps.changed_folders_files.outputs.all_changed_and_modified_files }}; do
+            echo "$file was changed"
+          done
+
+      - name: Setup Azure CLI
+        uses: azure/login@v1
+        with:
+          creds: '{"clientId":"${{ secrets.CLIENT_ID_ADF_MEF_DEV }}","clientSecret":"${{ secrets.CLIENT_SECRET_ADF_MEF_DEV }}","subscriptionId":"${{ secrets.SUBSCRIPTIONID_MEF_DEV }}","tenantId":"${{ secrets.TENANT_ID }}"}'
+          enable-AzPSSession: true
+
+      # Dev config file changes check
+      - name: Check for DEV Config file change
+        id: dev_config_file_change
+        if: ${{ github.base_ref == 'master' }}
+        run: |
+          if echo "${{ steps.changed_folders_files.outputs.all_changed_and_modified_files }}" | grep -q "notebooks/includes/environmentDevConfig.py"; then
+            echo "::set-output name=dev_config_file::true"
+          else
+            echo "::set-output name=dev_config_file::false"
+          fi
+      
+      - name: Check for DEV resources folder change
+        id: dev_resources_folder_change
+        if: ${{ github.base_ref == 'master' }}
+        run: |
+          if echo "${{ steps.changed_folders_files.outputs.all_changed_and_modified_files }}" | grep -q "resources"; then
+            echo "::set-output name=dev_resources_folder::true"
+          else
+            echo "::set-output name=dev_resources_folder::false"
+          fi
+
+      - name: Trigger Development's ADF pipeline
+        if: ${{ github.base_ref == 'master' }}
+        run: |
+          if [[ "${{ steps.dev_config_file_change.outputs.dev_config_file }}" == "true" && "${{ steps.dev_resources_folder_change.outputs.dev_resources_folder }}" == "true" ]]; then
+            az config set extension.use_dynamic_install=yes_without_prompt
+            az datafactory pipeline create-run --resource-group 0001-d-cpmef --factory-name ddfcpmef --name PL_GenerateConfigurationPipeline --parameters '{"GenerateConfigParameter":"Full"}'
+          elif [[ "${{ steps.dev_config_file_change.outputs.dev_config_file }}" == "false" && "${{ steps.dev_resources_folder_change.outputs.dev_resources_folder }}" == "true" ]]; then
+            az config set extension.use_dynamic_install=yes_without_prompt
+            az datafactory pipeline create-run --resource-group 0001-d-cpmef --factory-name ddfcpmef --name PL_GenerateConfigurationPipeline --parameters '{"GenerateConfigParameter":"Partial"}'
+          elif [[ "${{ steps.dev_config_file_change.outputs.dev_config_file }}" == "true" && "${{ steps.dev_resources_folder_change.outputs.dev_resources_folder }}" == "false" ]]; then
+            az config set extension.use_dynamic_install=yes_without_prompt
+            az datafactory pipeline create-run --resource-group 0001-d-cpmef --factory-name ddfcpmef --name PL_GenerateConfigurationPipeline --parameters '{"GenerateConfigParameter":"Full"}'
+          else
+            echo "No change in config files or resources folders"
+          fi

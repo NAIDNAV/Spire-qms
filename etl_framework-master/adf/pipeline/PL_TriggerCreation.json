@@ -1,0 +1,671 @@
+{
+	"name": "PL_TriggerCreation",
+	"properties": {
+		"activities": [
+			{
+				"name": "Lookup FwkTrigger Table",
+				"description": "Executes the SP ‘sps_LookupFwkTrigger’ that returns the data to create/update the trigger by active flag from the table ‘FwkTrigger’.",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[dbo].[sps_LookupFwkTrigger]",
+						"storedProcedureParameters": {
+							"AzureRestApiUrl": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.AzureRestApiUrl",
+									"type": "Expression"
+								}
+							},
+							"FactoryName": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().DataFactory",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "DS_SQL_Configuration",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ForEach ToBeProcessed Trigger in DBconfig table",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Collect ToBeProcessed DBconfig Triggers",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@variables('ToBeProcessedTriggers')",
+						"type": "Expression"
+					},
+					"batchCount": 5,
+					"activities": [
+						{
+							"name": "If Trigger exists in DBconfig table",
+							"type": "IfCondition",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@if(\n    contains(variables('ListAdfTriggers'), item().ADFTriggerName),\n    'True',\n    'False'\n    )",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "Create Trigger",
+										"description": "This will create/update the scheduled triggers in the targeted ADF with the settings returned by the ‘Lookup FwkTrigger Table’ activity.",
+										"type": "WebActivity",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"method": "PUT",
+											"url": {
+												"value": "@item().TriggerCreateURL",
+												"type": "Expression"
+											},
+											"body": {
+												"value": "@json(item().TriggerProperties)",
+												"type": "Expression"
+											},
+											"authentication": {
+												"type": "MSI",
+												"resource": {
+													"value": "https://management.azure.com/",
+													"type": "Expression"
+												}
+											}
+										}
+									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "Stop Trigger",
+										"type": "WebActivity",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"method": "POST",
+											"url": {
+												"value": "@item().TriggerStopURL",
+												"type": "Expression"
+											},
+											"body": {
+												"value": "{}",
+												"type": "Expression"
+											},
+											"authentication": {
+												"type": "MSI",
+												"resource": {
+													"value": "https://management.azure.com/",
+													"type": "Expression"
+												}
+											}
+										}
+									},
+									{
+										"name": "Update Trigger",
+										"description": "This will create/update the scheduled triggers in the targeted ADF with the settings returned by the ‘Lookup FwkTrigger Table’ activity.",
+										"type": "WebActivity",
+										"dependsOn": [
+											{
+												"activity": "Stop Trigger",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"method": "PUT",
+											"url": {
+												"value": "@item().TriggerCreateURL",
+												"type": "Expression"
+											},
+											"body": {
+												"value": "@json(item().TriggerProperties)",
+												"type": "Expression"
+											},
+											"authentication": {
+												"type": "MSI",
+												"resource": {
+													"value": "https://management.azure.com/",
+													"type": "Expression"
+												}
+											}
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "Update FwkTrigger Table",
+							"description": "Executes the ‘spu_FwkTriggerUpdate’ SP to update the ActiveFlag and LastUpdate columns in the ‘FwkTrigger’ table.",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "If Triggers is marked as Started",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[spu_FwkTriggerUpdate]",
+								"storedProcedureParameters": {
+									"ADFTriggerName": {
+										"value": {
+											"value": "@item().ADFTriggerName",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_configurationDB",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "If Triggers is marked as Started",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "If Trigger exists in DBconfig table",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@if(equals(item().runtimeState, 'Started'),'True','False')",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "Start Trigger",
+										"description": "This will start the scheduled triggers in the targeted ADF",
+										"type": "WebActivity",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"method": "POST",
+											"url": {
+												"value": "@item().TriggerEnabledURL",
+												"type": "Expression"
+											},
+											"body": {
+												"value": "{}",
+												"type": "Expression"
+											},
+											"authentication": {
+												"type": "MSI",
+												"resource": {
+													"value": "https://management.azure.com/",
+													"type": "Expression"
+												}
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "List ADF Triggers by Name",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Collect ADF Triggers While Next Link Exists",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@variables('ADFTriggers')",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Append Trigger Name",
+							"type": "AppendVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "ListAdfTriggers",
+								"value": {
+									"value": "@item().name\n",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "ForEach Trigger in ADF",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "List DBconfig Triggers by Name",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@variables('ListAdfTriggers')",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "If Trigger is not in DBconfig table and is in ADF",
+							"type": "IfCondition",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@if(contains(variables('ListDBconfigTriggers'), item()), 'True', 'False')",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "Stop not listed Trigger in ADF",
+										"type": "WebActivity",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"method": "POST",
+											"url": {
+												"value": "@concat(\n    pipeline().parameters.AzureRestApiUrl,\n    '/providers/Microsoft.DataFactory/factories/'\n    ,pipeline().DataFactory,\n    '/triggers/',\n    item(),\n    '/stop?api-version=2018-06-01'\n    )",
+												"type": "Expression"
+											},
+											"body": {
+												"value": "{}",
+												"type": "Expression"
+											},
+											"authentication": {
+												"type": "MSI",
+												"resource": "https://management.azure.com/"
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "List DBconfig Triggers by Name",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "ForEach ToBeProcessed Trigger in DBconfig table",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Lookup FwkTrigger Table').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Append DBconfig ADFTriggerName",
+							"type": "AppendVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "ListDBconfigTriggers",
+								"value": {
+									"value": "@item().ADFTriggerName",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Collect ADF Triggers While Next Link Exists",
+				"type": "Until",
+				"dependsOn": [
+					{
+						"activity": "Set_GetADFTriggerURL",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(variables('IsNextLinkPresent'), false)",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Get ADF Triggers",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"method": "GET",
+								"url": {
+									"value": "@variables('GetADFTriggersURL')",
+									"type": "Expression"
+								},
+								"authentication": {
+									"type": "MSI",
+									"resource": {
+										"value": "https://management.azure.com/",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "CheckIfNextLinkExists",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "Get ADF Triggers",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@contains(activity('Get ADF Triggers').output, 'nextLink')",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "Set_ IsNextLinkPresent_False",
+										"type": "SetVariable",
+										"dependsOn": [],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "IsNextLinkPresent",
+											"value": false
+										}
+									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "Update GetTriggersURL",
+										"type": "SetVariable",
+										"dependsOn": [],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "GetADFTriggersURL",
+											"value": {
+												"value": "@activity('Get ADF Triggers').output.nextLink",
+												"type": "Expression"
+											}
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "SetTriggerList_IfNextLinkNotExists",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "CheckIfNextLinkExists",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "ListADFTriggersTemp",
+								"value": {
+									"value": "@union(activity('Get ADF Triggers').output.value, variables('ADFTriggers'))",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "SetTemp_ListOfTriggers_copy1",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "SetTriggerList_IfNextLinkNotExists",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "ADFTriggers",
+								"value": {
+									"value": "@variables('ListADFTriggersTemp')",
+									"type": "Expression"
+								}
+							}
+						}
+					],
+					"timeout": "0.12:00:00"
+				}
+			},
+			{
+				"name": "Set_GetADFTriggerURL",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Lookup FwkTrigger Table",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "GetADFTriggersURL",
+					"value": {
+						"value": "@activity('Lookup FwkTrigger Table').output.value[0].GetTriggers",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Collect ToBeProcessed DBconfig Triggers",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "List ADF Triggers by Name",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Lookup FwkTrigger Table').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "If ToBeProcessed",
+							"type": "IfCondition",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@item().ToBeProcessed",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "Append DBconfig Trigger",
+										"type": "AppendVariable",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "ToBeProcessedTriggers",
+											"value": {
+												"value": "@item()",
+												"type": "Expression"
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"AzureRestApiUrl": {
+				"type": "string",
+				"defaultValue": "https://management.azure.com//subscriptions/775f9e05-bbee-446a-aa43-3d2296410d19/resourceGroups/0001-d-cpmef"
+			}
+		},
+		"variables": {
+			"ListAdfTriggers": {
+				"type": "Array"
+			},
+			"ADFTriggers": {
+				"type": "Array",
+				"defaultValue": []
+			},
+			"ListDBconfigTriggers": {
+				"type": "Array"
+			},
+			"IsNextLinkPresent": {
+				"type": "Boolean",
+				"defaultValue": true
+			},
+			"GetADFTriggersURL": {
+				"type": "String"
+			},
+			"ListADFTriggersTemp": {
+				"type": "Array"
+			},
+			"ToBeProcessedTriggers": {
+				"type": "Array",
+				"defaultValue": []
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-07-06T08:29:13Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,639 @@
+[
+    {
+        "Entity": "Address",
+        "Attribute": "WK_Address_Identifier",
+        "DataType": "bigint",
+        "IsPrimaryKey": true,
+        "IsIdentity": true
+    },
+    {
+        "Entity": "Address",
+        "Attribute": "AddressID",
+        "DataType": "int",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "Address",
+        "Attribute": "AddressLine1",
+        "DataType": "varchar(60)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "Address",
+        "Attribute": "AddressLine2",
+        "DataType": "varchar(60)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "Address",
+        "Attribute": "City",
+        "DataType": "varchar(30)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "Address",
+        "Attribute": "StateProvince",
+        "DataType": "varchar(50)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "Address",
+        "Attribute": "CountryRegion",
+        "DataType": "varchar(50)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "Address",
+        "Attribute": "ZIPCode",
+        "DataType": "varchar(15)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "Customer",
+        "Attribute": "WK_Customer_Identifier",
+        "DataType": "bigint",
+        "IsPrimaryKey": true,
+        "IsIdentity": true
+    },
+    {
+        "Entity": "Customer",
+        "Attribute": "CustomerID",
+        "DataType": "int",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "Customer",
+        "Attribute": "NameStyle",
+        "DataType": "tinyint",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "Customer",
+        "Attribute": "Title",
+        "DataType": "varchar(8)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "Customer",
+        "Attribute": "FirstName",
+        "DataType": "varchar(50)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "Customer",
+        "Attribute": "MiddleName",
+        "DataType": "varchar(50)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "Customer",
+        "Attribute": "LastName",
+        "DataType": "varchar(50)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "Customer",
+        "Attribute": "Suffix",
+        "DataType": "varchar(10)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "Customer",
+        "Attribute": "CompanyName",
+        "DataType": "varchar(128)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "Customer",
+        "Attribute": "SalesPerson",
+        "DataType": "varchar(256)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "Customer",
+        "Attribute": "Email",
+        "DataType": "varchar(50)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "Customer",
+        "Attribute": "PhoneNumber",
+        "DataType": "varchar(25)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "CustomerNoIdentity",
+        "Attribute": "CustomerID",
+        "DataType": "int",
+        "IsPrimaryKey": true,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "CustomerNoIdentity",
+        "Attribute": "NameStyle",
+        "DataType": "tinyint",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "CustomerNoIdentity",
+        "Attribute": "Title",
+        "DataType": "varchar(8)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "CustomerNoIdentity",
+        "Attribute": "FirstName",
+        "DataType": "varchar(50)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "CustomerNoIdentity",
+        "Attribute": "MiddleName",
+        "DataType": "varchar(50)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "CustomerNoIdentity",
+        "Attribute": "LastName",
+        "DataType": "varchar(50)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "CustomerNoIdentity",
+        "Attribute": "Suffix",
+        "DataType": "varchar(10)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "CustomerNoIdentity",
+        "Attribute": "CompanyName",
+        "DataType": "varchar(128)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "CustomerNoIdentity",
+        "Attribute": "SalesPerson",
+        "DataType": "varchar(256)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "CustomerNoIdentity",
+        "Attribute": "Email",
+        "DataType": "varchar(50)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "CustomerNoIdentity",
+        "Attribute": "PhoneNumber",
+        "DataType": "varchar(25)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "CustomerAddress",
+        "Attribute": "WK_CustomerAddress_Identifier",
+        "DataType": "bigint",
+        "IsPrimaryKey": true,
+        "IsIdentity": true
+    },
+    {
+        "Entity": "CustomerAddress",
+        "Attribute": "WK_Customer_Identifier",
+        "DataType": "bigint",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "CustomerAddress",
+        "Attribute": "CustomerID",
+        "DataType": "int",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "CustomerAddress",
+        "Attribute": "WK_Address_Identifier",
+        "DataType": "bigint",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "CustomerAddress",
+        "Attribute": "AddressID",
+        "DataType": "int",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "CustomerAddress",
+        "Attribute": "AddressType",
+        "DataType": "varchar(50)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "SalesOrderHeader",
+        "Attribute": "WK_SalesOrderHeader_Identifier",
+        "DataType": "bigint",
+        "IsPrimaryKey": true,
+        "IsIdentity": true
+    },
+    {
+        "Entity": "SalesOrderHeader",
+        "Attribute": "SalesOrderID",
+        "DataType": "int",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "SalesOrderHeader",
+        "Attribute": "RevisionNumber",
+        "DataType": "int",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "SalesOrderHeader",
+        "Attribute": "OrderDate",
+        "DataType": "datetime",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "SalesOrderHeader",
+        "Attribute": "DueDate",
+        "DataType": "datetime",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "SalesOrderHeader",
+        "Attribute": "ShipDate",
+        "DataType": "datetime",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "SalesOrderHeader",
+        "Attribute": "Status",
+        "DataType": "int",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "SalesOrderHeader",
+        "Attribute": "OnlineOrderFlag",
+        "DataType": "tinyint",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "SalesOrderHeader",
+        "Attribute": "SalesOrderNumber",
+        "DataType": "varchar(25)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "SalesOrderHeader",
+        "Attribute": "PurchaseOrderNumber",
+        "DataType": "varchar(25)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "SalesOrderHeader",
+        "Attribute": "AccountNumber",
+        "DataType": "varchar(15)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "SalesOrderHeader",
+        "Attribute": "WK_Customer_Identifier",
+        "DataType": "bigint",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "SalesOrderHeader",
+        "Attribute": "CustomerID",
+        "DataType": "int",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "SalesOrderHeader",
+        "Attribute": "WK_ShipToAddress_Identifier",
+        "DataType": "bigint",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },    
+    {
+        "Entity": "SalesOrderHeader",
+        "Attribute": "ShipToAddressID",
+        "DataType": "int",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "SalesOrderHeader",
+        "Attribute": "WK_BillToAddress_Identifier",
+        "DataType": "bigint",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },   
+    {
+        "Entity": "SalesOrderHeader",
+        "Attribute": "BillToAddressID",
+        "DataType": "int",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "SalesOrderHeader",
+        "Attribute": "ShipMethod",
+        "DataType": "varchar(50)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "SalesOrderHeader",
+        "Attribute": "CreditCardApprovalCode",
+        "DataType": "varchar(15)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "SalesOrderHeader",
+        "Attribute": "SubTotal",
+        "DataType": "numeric(19,4)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "SalesOrderHeader",
+        "Attribute": "TaxAmt",
+        "DataType": "numeric(19,4)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "SalesOrderHeader",
+        "Attribute": "Freight",
+        "DataType": "numeric(19,4)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "SalesOrderHeader",
+        "Attribute": "TotalDue",
+        "DataType": "numeric(19,4)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "SalesOrderHeader",
+        "Attribute": "Comment",
+        "DataType": "varchar(1000)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "SalesOrderHeader",
+        "Attribute": "ModifiedDate",
+        "DataType": "datetime",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCurrency",
+        "Attribute": "WK_DimCurrency_Identifier",
+        "DataType": "bigint",
+        "IsPrimaryKey": true,
+        "IsIdentity": true
+    },
+    {
+        "Entity": "DimCurrency",
+        "Attribute": "CurrencyKey",
+        "DataType": "bigint",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCurrency",
+        "Attribute": "CurrencyAlternateKey",
+        "DataType": "varchar(50)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCurrency",
+        "Attribute": "CurrencyName",
+        "DataType": "varchar(50)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "Attribute": "WK_DimCustomer_Identifier",
+        "DataType": "bigint",
+        "IsPrimaryKey": true,
+        "IsIdentity": true
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "Attribute": "CustomerKey",
+        "DataType": "bigint",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "Attribute": "AddressLine1",
+        "DataType": "varchar(500)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "Attribute": "AddressLine2",
+        "DataType": "varchar(500)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "Attribute": "BirthDate",
+        "DataType": "datetime",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "Attribute": "CommuteDistance",
+        "DataType": "varchar(50)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "Attribute": "CustomerAlternateKey",
+        "DataType": "varchar(50)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "Attribute": "DateFirstPurchase",
+        "DataType": "datetime",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "Attribute": "Email",
+        "DataType": "varchar(100)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "Attribute": "EnglishEducation",
+        "DataType": "varchar(100)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "Attribute": "EnglishOccupation",
+        "DataType": "varchar(100)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "Attribute": "FirstName",
+        "DataType": "varchar(100)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "Attribute": "Gender",
+        "DataType": "varchar(50)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "Attribute": "GeographyKey",
+        "DataType": "bigint",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "Attribute": "HouseownerFlag",
+        "DataType": "varchar(50)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "Attribute": "LastName",
+        "DataType": "varchar(50)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "Attribute": "MaritalStatus",
+        "DataType": "varchar(50)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "Attribute": "MiddleName",
+        "DataType": "varchar(50)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "Attribute": "NameStyle",
+        "DataType": "bigint",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "Attribute": "NumberChildrenAthome",
+        "DataType": "bigint",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "Attribute": "Phone",
+        "DataType": "varchar(50)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "Attribute": "Suffix",
+        "DataType": "varchar(50)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "Attribute": "Title",
+        "DataType": "varchar(50)",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "Attribute": "TotalChildren",
+        "DataType": "bigint",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "Attribute": "YearlyIncome",
+        "DataType": "bigint",
+        "IsPrimaryKey": false,
+        "IsIdentity": false
+    }
+]

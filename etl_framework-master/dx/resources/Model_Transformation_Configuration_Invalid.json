@@ -1,0 +1,46 @@
+[
+    {
+        "Key": "value",
+        "Entities": [
+            {
+                "Params": {
+                    "batchNumber": 1
+                }
+            },
+            {
+                "EntityName": "Params_NotValidJSON",
+                "Params": "not valid JSON"
+            },
+            {
+                "EntityName": "Params_WithExtraKey",
+                "Params": {
+                    "extraKey": "should not be here"
+                }
+            },
+            {
+                "EntityName": "Params.WriteMode_InvalidValue",
+                "Params": {
+                    "writeMode": "invalid value"
+                }
+            },
+            {
+                "EntityName": "Params.KeyColumns_MandatoryForWriteModeSnapshot",
+                "Params": {
+                    "writeMode": "Snapshot"
+                }
+            },
+            {
+                "EntityName": "Params.FwkTriggerId_NonExisting",
+                "Params": {
+                    "fwkTriggerId": "nonExisting"
+                }
+            },
+            {
+                "EntityName": "Params.BatchNumber_IsNotINT",
+                "Params": {
+                    "batchNumber": "StringValue"
+                }
+            }
+        ]
+    }
+]

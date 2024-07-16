@@ -1,0 +1,190 @@
+{
+	"name": "PL_ING_07_99_Archive",
+	"properties": {
+		"activities": [
+			{
+				"name": "IF archiveLinkedService Defined",
+				"description": "if the archive path is defined then copy source file with timestamp prefix to archive folder",
+				"type": "IfCondition",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@empty(pipeline().parameters.FwkItem['ArchivalLinkedServiceId'])",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Move to archivePath SFTP",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"deleteFilesAfterCompletion": true
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "SftpWriteSettings",
+										"operationTimeout": "01:00:00",
+										"useTempFileRename": true
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "DS_ADLS_BIN_File",
+									"type": "DatasetReference",
+									"parameters": {
+										"InstanceURL": {
+											"value": "@pipeline().parameters.FwkItem['InstanceURL']",
+											"type": "Expression"
+										},
+										"FullPath": {
+											"value": "@pipeline().parameters.FilePath",
+											"type": "Expression"
+										},
+										"FileName": {
+											"value": "@pipeline().parameters.FileName",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DS_SFTPArchive_BIN_File",
+									"type": "DatasetReference",
+									"parameters": {
+										"FwkItem": {
+											"value": "@pipeline().parameters.FwkItem",
+											"type": "Expression"
+										},
+										"ds_inputFileName": {
+											"value": "@concat(\n\tformatDateTime(pipeline().parameters.PL_01TriggerTime,'yyyy'),\n\tformatDateTime(pipeline().parameters.PL_01TriggerTime,'MM'),\n\tformatDateTime(pipeline().parameters.PL_01TriggerTime,'dd'),\n\tformatDateTime(pipeline().parameters.PL_01TriggerTime,'HH'),\n\tformatDateTime(pipeline().parameters.PL_01TriggerTime,'mm'),\n\t'_',\n\tpipeline().parameters.FileName\n)",
+											"type": "Expression"
+										},
+										"ds_inputFilePath": {
+											"value": "@pipeline().parameters.FwkItem['ArchivePath']",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Move to archivePath  ADLS",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"deleteFilesAfterCompletion": true
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "DS_ADLS_BIN_File",
+									"type": "DatasetReference",
+									"parameters": {
+										"InstanceURL": {
+											"value": "@pipeline().parameters.FwkItem['InstanceURL']",
+											"type": "Expression"
+										},
+										"FullPath": {
+											"value": "@pipeline().parameters.FilePath",
+											"type": "Expression"
+										},
+										"FileName": {
+											"value": "@pipeline().parameters.FileName",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DS_ADLS_BIN_File",
+									"type": "DatasetReference",
+									"parameters": {
+										"InstanceURL": {
+											"value": "@pipeline().parameters.FwkItem['InstanceURL']",
+											"type": "Expression"
+										},
+										"FullPath": {
+											"value": "@pipeline().parameters.FwkItem['ArchivePath']",
+											"type": "Expression"
+										},
+										"FileName": {
+											"value": "@concat(\n\tformatDateTime(pipeline().parameters.PL_01TriggerTime,'yyyy'),\n\tformatDateTime(pipeline().parameters.PL_01TriggerTime,'MM'),\n\tformatDateTime(pipeline().parameters.PL_01TriggerTime,'dd'),\n\tformatDateTime(pipeline().parameters.PL_01TriggerTime,'HH'),\n\tformatDateTime(pipeline().parameters.PL_01TriggerTime,'mm'),\n\t'_',\npipeline().parameters.FileName\n)",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"FwkItem": {
+				"type": "array"
+			},
+			"PL_01TriggerTime": {
+				"type": "string"
+			},
+			"FilePath": {
+				"type": "string"
+			},
+			"FileName": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "01 Ingestion Module/07 ADLS"
+		},
+		"annotations": []
+	}
+}

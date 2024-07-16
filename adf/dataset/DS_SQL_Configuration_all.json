@@ -1,0 +1,67 @@
+{
+	"name": "DS_SQL_Configuration_all",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_configurationDB",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"FileName": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "01 Ingestion Module DS"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "FwkEntityId",
+				"type": "varchar"
+			},
+			{
+				"name": "FwkLinkedServiceId",
+				"type": "varchar"
+			},
+			{
+				"name": "Path",
+				"type": "varchar"
+			},
+			{
+				"name": "Format",
+				"type": "varchar"
+			},
+			{
+				"name": "RelativeURL",
+				"type": "varchar"
+			},
+			{
+				"name": "Header01",
+				"type": "varchar"
+			},
+			{
+				"name": "Header02",
+				"type": "varchar"
+			},
+			{
+				"name": "LastUpdate",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			},
+			{
+				"name": "UpdatedBy",
+				"type": "varchar"
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": {
+				"value": "@dataset().FileName",
+				"type": "Expression"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

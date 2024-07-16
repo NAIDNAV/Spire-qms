@@ -1,0 +1,11 @@
+[
+    {
+        "Query": "SELECT * FROM Application_MEF_History.Customer WHERE MGT_isCurrent = TRUE AND MGT_isDeleted = FALSE LIMIT 10",
+        "Entity": "SalesLT.CustomerEXP",
+        "PreCopyScript": "TRUNCATE TABLE SalesLT.CustomerEXP"
+    },
+    {
+        "Query": "SELECT * FROM Application_MEF_History.CustomerAddress WHERE MGT_isCurrent = TRUE AND MGT_isDeleted = FALSE LIMIT 10",
+        "Entity": "SalesLT.CustomerAddressEXP"
+    }
+]

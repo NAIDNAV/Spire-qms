@@ -1,0 +1,214 @@
+{
+	"name": "PL_ING_00_IngestionMaster",
+	"properties": {
+		"activities": [
+			{
+				"name": "If has active instructions",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Has active instructions",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@activity('Has active instructions').output.firstRow['Result']",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Set outputContinueETL to True",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "pipelineReturnValue",
+								"value": [
+									{
+										"key": "outputContinueETL",
+										"value": {
+											"type": "Boolean",
+											"content": true
+										}
+									}
+								],
+								"setSystemVariable": true
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Execute PL_ING_01_00_RunIngestion",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_ING_01_00_RunIngestion",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"EntRunId": {
+										"value": "@pipeline().parameters.EntRunId",
+										"type": "Expression"
+									},
+									"EntTriggerTime": {
+										"value": "@pipeline().parameters.EntTriggerTime",
+										"type": "Expression"
+									},
+									"FwkTriggerId": {
+										"value": "@pipeline().parameters.FwkTriggerId",
+										"type": "Expression"
+									},
+									"FwkLayerId": {
+										"value": "@pipeline().parameters.FwkLayerId",
+										"type": "Expression"
+									},
+									"ADFTriggerName": {
+										"value": "@pipeline().parameters.ADFTriggerName",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Set outputContinueETL from pipeline output",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Execute PL_ING_01_00_RunIngestion",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "pipelineReturnValue",
+								"value": [
+									{
+										"key": "outputContinueETL",
+										"value": {
+											"type": "Expression",
+											"content": "@not(activity('Execute PL_ING_01_00_RunIngestion').output.pipelineReturnValue['outputStopETLAfterIngestion'])"
+										}
+									}
+								],
+								"setSystemVariable": true
+							}
+						},
+						{
+							"name": "Set outputStopOrContinueETLOnFailure",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Execute PL_ING_01_00_RunIngestion",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "pipelineReturnValue",
+								"value": [
+									{
+										"key": "outputContinueETL",
+										"value": {
+											"type": "Expression",
+											"content": "@not(activity('Execute PL_ING_01_00_RunIngestion').output.pipelineReturnValue['outputStopETLAfterIngestion'])"
+										}
+									}
+								],
+								"setSystemVariable": true
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Has active instructions",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[dbo].[sps_HasActiveIngtInstructions]",
+						"storedProcedureParameters": {
+							"FwkLayerId": {
+								"type": "String",
+								"value": {
+									"value": "@if(\n    equals(pipeline().parameters.FwkLayerId, 'none'),\n    null,\n    pipeline().parameters.FwkLayerId\n)",
+									"type": "Expression"
+								}
+							},
+							"FwkTriggerId": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.FwkTriggerId",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "DS_SQL_Configuration",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": true
+				}
+			}
+		],
+		"parameters": {
+			"EntRunId": {
+				"type": "string"
+			},
+			"EntTriggerTime": {
+				"type": "string"
+			},
+			"FwkTriggerId": {
+				"type": "string"
+			},
+			"FwkLayerId": {
+				"type": "string"
+			},
+			"ADFTriggerName": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "01 Ingestion Module"
+		},
+		"annotations": []
+	}
+}

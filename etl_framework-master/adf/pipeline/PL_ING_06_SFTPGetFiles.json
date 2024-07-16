@@ -1,0 +1,595 @@
+{
+	"name": "PL_ING_06_SFTPGetFiles",
+	"properties": {
+		"activities": [
+			{
+				"name": "setFilePath",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "setFileName",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "varFwkFilePath",
+					"value": {
+						"value": "@substring(pipeline().parameters.FwkItem['Path'], \n    0, \n    if(equals(lastindexof(pipeline().parameters.FwkItem['Path'],'/'),-1),0,lastindexof(pipeline().parameters.FwkItem['Path'],'/'))\n)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "setFileName",
+				"description": "@dataset().FwkItem['Path']",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "varFwkFileName",
+					"value": {
+						"value": "@substring(pipeline().parameters.FwkItem['Path'], \n    add(lastindexof(pipeline().parameters.FwkItem['Path'],'/'), 1), \n    add(add(length(pipeline().parameters.FwkItem['Path']), mul(lastindexof(pipeline().parameters.FwkItem['Path'],'/'),-1)), -1\n    )\n)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "setFwkFileIfWildcardPosition",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "setFilePath",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "varFwkFileIfWildcardPosition",
+					"value": {
+						"value": "@string(if(equals(indexOf(variables('varFwkFileName'), '*'),-1),0,1))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "setOutput",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "loopThroughMatchingFileNames",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "pipelineReturnValue",
+					"value": [
+						{
+							"key": "outputFileName",
+							"value": {
+								"type": "Expression",
+								"content": "@variables('varFileName')"
+							}
+						},
+						{
+							"key": "outputFilePath",
+							"value": {
+								"type": "Expression",
+								"content": "@variables('varFwkFilePath')"
+							}
+						}
+					],
+					"setSystemVariable": true
+				}
+			},
+			{
+				"name": "switchWildcardPresent",
+				"type": "Switch",
+				"dependsOn": [
+					{
+						"activity": "setFwkFileIfWildcardPosition",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@variables('varFwkFileIfWildcardPosition')",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "0",
+							"activities": [
+								{
+									"name": "getListOfFileNamesFile",
+									"type": "GetMetadata",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataset": {
+											"referenceName": "DS_SFTP_BIN_Folder",
+											"type": "DatasetReference",
+											"parameters": {
+												"FwkItem": {
+													"value": "@pipeline().parameters.FwkItem",
+													"type": "Expression"
+												},
+												"FwkPath": {
+													"value": "@variables('varFwkFilePath')",
+													"type": "Expression"
+												}
+											}
+										},
+										"fieldList": [
+											"childItems"
+										],
+										"storeSettings": {
+											"type": "SftpReadSettings",
+											"recursive": true,
+											"enablePartitionDiscovery": false,
+											"disableChunking": false
+										},
+										"formatSettings": {
+											"type": "BinaryReadSettings"
+										}
+									}
+								},
+								{
+									"name": "getListOfFileNamesFilterFile",
+									"type": "Filter",
+									"dependsOn": [
+										{
+											"activity": "getListOfFileNamesFile",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"items": {
+											"value": "@activity('getListOfFileNamesFile').output.childItems",
+											"type": "Expression"
+										},
+										"condition": {
+											"value": "@and(equals(toLower(item().name), toLower(variables('varFwkFileName'))), equals(item().type,'File'))",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "setMatchingFileNamesFile",
+									"type": "SetVariable",
+									"dependsOn": [
+										{
+											"activity": "getListOfFileNamesFilterFile",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "varMatchingFileNames",
+										"value": {
+											"value": "@activity('getListOfFileNamesFilterFile').output.value",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "1",
+							"activities": [
+								{
+									"name": "getListOfFileNames",
+									"type": "GetMetadata",
+									"dependsOn": [
+										{
+											"activity": "setFwkFileRight",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataset": {
+											"referenceName": "DS_SFTP_BIN_Folder",
+											"type": "DatasetReference",
+											"parameters": {
+												"FwkItem": {
+													"value": "@pipeline().parameters.FwkItem",
+													"type": "Expression"
+												},
+												"FwkPath": {
+													"value": "@variables('varFwkFilePath')",
+													"type": "Expression"
+												}
+											}
+										},
+										"fieldList": [
+											"childItems"
+										],
+										"storeSettings": {
+											"type": "SftpReadSettings",
+											"recursive": true,
+											"enablePartitionDiscovery": false,
+											"disableChunking": false
+										},
+										"formatSettings": {
+											"type": "BinaryReadSettings"
+										}
+									}
+								},
+								{
+									"name": "setFwkFileLeft",
+									"type": "SetVariable",
+									"dependsOn": [],
+									"policy": {
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "varFwkFileLeft",
+										"value": {
+											"value": "@split(variables('varFwkFileName'), '*')[0]",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "setFwkFileRight",
+									"type": "SetVariable",
+									"dependsOn": [
+										{
+											"activity": "setFwkFileLeft",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "varFwkFileRight",
+										"value": {
+											"value": "@split(variables('varFwkFileName'), '*')[int(variables('varFwkFileIfWildcardPosition'))]",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "getListOfFileNamesFilter",
+									"type": "Filter",
+									"dependsOn": [
+										{
+											"activity": "getListOfFileNames",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"items": {
+											"value": "@activity('getListOfFileNames').output.childItems",
+											"type": "Expression"
+										},
+										"condition": {
+											"value": "@and(and(startswith(item().name, variables('varFwkFileLeft')), endswith(item().name, variables('varFwkFileRight'))\n    ),\n        equals(item().type,'File'))",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "setMatchingFileNames",
+									"type": "SetVariable",
+									"dependsOn": [
+										{
+											"activity": "getListOfFileNamesFilter",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "varMatchingFileNames",
+										"value": {
+											"value": "@activity('getListOfFileNamesFilter').output.value",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "loopThroughMatchingFileNames",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Check IngestAllMatchingFiles",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@variables('varIngestMatchingFileNames')",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "getLastModifiedDateOfTheCurrentIterationFile",
+							"type": "GetMetadata",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "DS_SFTP_BIN_File",
+									"type": "DatasetReference",
+									"parameters": {
+										"FwkItem": {
+											"value": "@pipeline().parameters.FwkItem",
+											"type": "Expression"
+										},
+										"ds_inputFileName": {
+											"value": "@item().name",
+											"type": "Expression"
+										},
+										"ds_inputFilePath": {
+											"value": "@variables('varFwkFilePath')",
+											"type": "Expression"
+										}
+									}
+								},
+								"fieldList": [
+									"itemName",
+									"lastModified"
+								],
+								"storeSettings": {
+									"type": "SftpReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false,
+									"disableChunking": false
+								},
+								"formatSettings": {
+									"type": "BinaryReadSettings"
+								}
+							}
+						},
+						{
+							"name": "conditionToCheckIfFileDateGreaterThanSetDate",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "getLastModifiedDateOfTheCurrentIterationFile",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@greater(ticks(activity('getLastModifiedDateOfTheCurrentIterationFile').output.lastModified),ticks(formatDateTime(variables('varReferenceDateTime'))))",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "setFileLastModifiedDate",
+										"type": "SetVariable",
+										"dependsOn": [],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "varReferenceDateTime",
+											"value": {
+												"value": "@activity('getLastModifiedDateOfTheCurrentIterationFile').output.lastModified",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "setLatestFileName",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "setFileLastModifiedDate",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "varFileName",
+											"value": {
+												"value": "@createArray(item())",
+												"type": "Expression"
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Check IngestAllMatchingFiles",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "switchWildcardPresent",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@if(contains(pipeline().parameters.FwkItem, 'Params'), \n    if(contains(json(pipeline().parameters.FwkItem['Params']), 'ingestAllMatchingFiles'), \n        bool(json(pipeline().parameters.FwkItem['Params'])['ingestAllMatchingFiles']), \n        false\n    ), \n    false\n)",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Set varIngestMatchingFileNames",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "varIngestMatchingFileNames",
+								"value": {
+									"value": "@variables('varMatchingFileNames')",
+									"type": "Expression"
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Set output",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "varFileName",
+								"value": {
+									"value": "@variables('varMatchingFileNames')",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"FwkItem": {
+				"type": "array"
+			}
+		},
+		"variables": {
+			"varFwkFilePath": {
+				"type": "String"
+			},
+			"varFwkFileName": {
+				"type": "String"
+			},
+			"varFwkFileLeft": {
+				"type": "String"
+			},
+			"varFwkFileRight": {
+				"type": "String"
+			},
+			"varFwkFileIfWildcardPosition": {
+				"type": "String"
+			},
+			"varReferenceDateTime": {
+				"type": "String",
+				"defaultValue": "1900-01-01 00:00:00"
+			},
+			"varFileName": {
+				"type": "Array"
+			},
+			"varMatchingFileNames": {
+				"type": "Array",
+				"defaultValue": []
+			},
+			"varIngestMatchingFileNames": {
+				"type": "Array",
+				"defaultValue": []
+			}
+		},
+		"folder": {
+			"name": "01 Ingestion Module/06 SFTP"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-07-06T08:29:14Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

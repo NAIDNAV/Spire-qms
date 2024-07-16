@@ -1,0 +1,382 @@
+{
+	"name": "PL_EXP_01_RunExport",
+	"properties": {
+		"activities": [
+			{
+				"name": "LookupExpOutput",
+				"description": "Executes the SP ‘sps_LookupExpOutput’ to get the source and the sink information of the data to ingest",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "sp_FwkLogInsert",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[dbo].[sps_LookupExpOutput]",
+						"storedProcedureParameters": {
+							"FwkTriggerId": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.FwkTriggerId",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "DS_SQL_Configuration",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "sp_UpdateExecutionLog_succeeded",
+				"description": "Executes the SP spu_FwkLogUpdate to update the record created by the ‘InsertIntoFwkLog’ activity in the table ‘FwkLog’ by updating the columns ‘PipelineStatus’ to ‘Success’.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "ForEachObject",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spu_FwkLogUpdate]",
+					"storedProcedureParameters": {
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStatus": {
+							"value": {
+								"value": "Succeeded",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"JobRunUrl": {
+							"value": null,
+							"type": "String"
+						},
+						"ErrorMessage": {
+							"value": null,
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_UpdateExecutionLog_failed",
+				"description": "Executes the SP spu_FwkLogUpdate to update the record created by the ‘InsertIntoFwkLog’ activity in the table ‘FwkLog’ by updating the columns ‘PipelineStatus’ to ‘Success’.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "ForEachObject",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spu_FwkLogUpdate]",
+					"storedProcedureParameters": {
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStatus": {
+							"value": {
+								"value": "Failed",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"JobRunUrl": {
+							"value": null,
+							"type": "String"
+						},
+						"ErrorMessage": {
+							"value": null,
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_FwkLogInsert",
+				"description": "Executes the SP spi_FwkLogInsert to insert record into FwkLog table with the execution module information by pipeline id and with null status.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spi_FwkLogInsert]",
+					"storedProcedureParameters": {
+						"EntRunId": {
+							"value": {
+								"value": "@pipeline().parameters.EntRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"Module": {
+							"value": {
+								"value": "Export",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"StartDate": {
+							"value": {
+								"value": "@formatdatetime(pipeline().TriggerTime)",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						},
+						"ADFTriggerName": {
+							"value": null,
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "ForEachObject",
+				"description": "Iterates over a dataset and loop by number of rows it gets with the output from ‘LookupIngOutput’ activity.",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "LookupExpOutput",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@array(activity('LookupExpOutput').output.value)",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 30,
+					"activities": [
+						{
+							"name": "Switch_SourceType",
+							"description": "Evaluates the input value ‘SourceType’ corresponding to a case that matches the condition.",
+							"type": "Switch",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"on": {
+									"value": "@string(item().SourceType)",
+									"type": "Expression"
+								},
+								"cases": [
+									{
+										"value": "FileShare",
+										"activities": [
+											{
+												"name": "PL_EXP_03_01_FileShareExport",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"policy": {
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "PL_EXP_02_01_FileShareExport",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"FwkItem": {
+															"value": "@item()",
+															"type": "Expression"
+														},
+														"PL_01TriggerTime": {
+															"value": "@pipeline().TriggerTime",
+															"type": "Expression"
+														},
+														"EntRunId": {
+															"value": "@pipeline().parameters.EntRunId",
+															"type": "Expression"
+														},
+														"ModuleRunId": {
+															"value": "@pipeline().RunId",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									},
+									{
+										"value": "SFTP",
+										"activities": [
+											{
+												"name": "PL_EXP_03_02_SFTPExport",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"policy": {
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "PL_EXP_02_02_SFTPExport",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"FwkItem": {
+															"value": "@item()",
+															"type": "Expression"
+														},
+														"PL_01TriggerTime": {
+															"value": "@pipeline().TriggerTime",
+															"type": "Expression"
+														},
+														"EntRunId": {
+															"value": "@pipeline().parameters.EntRunId",
+															"type": "Expression"
+														},
+														"ModuleRunId": {
+															"value": "@pipeline().RunId",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									},
+									{
+										"value": "SQL",
+										"activities": [
+											{
+												"name": "PL_EXP_03_03_SQLExport",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"policy": {
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "PL_EXP_02_03_SQLExport",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"FwkItem": {
+															"value": "@item()",
+															"type": "Expression"
+														},
+														"PL_01TriggerTime": {
+															"value": "@pipeline().TriggerTime",
+															"type": "Expression"
+														},
+														"EntRunId": {
+															"value": "@pipeline().parameters.EntRunId",
+															"type": "Expression"
+														},
+														"ModuleRunId": {
+															"value": "@pipeline().RunId",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									}
+								]
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"EntRunId": {
+				"type": "string"
+			},
+			"EntTriggerTime": {
+				"type": "string"
+			},
+			"FwkTriggerId": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "03 Export Module"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-07-06T08:29:16Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

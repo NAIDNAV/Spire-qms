@@ -1,0 +1,64 @@
+{
+	"name": "DS_SQL_Configuration",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_configurationDB",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "01 Ingestion Module DS"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "DtLogId",
+				"type": "bigint",
+				"precision": 19
+			},
+			{
+				"name": "DtConfigId",
+				"type": "bigint",
+				"precision": 19
+			},
+			{
+				"name": "DtOutputId",
+				"type": "bigint",
+				"precision": 19
+			},
+			{
+				"name": "EntRunId",
+				"type": "varchar"
+			},
+			{
+				"name": "DtRunId",
+				"type": "varchar"
+			},
+			{
+				"name": "DtStatus",
+				"type": "varchar"
+			},
+			{
+				"name": "PipelineTriggerDt",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			},
+			{
+				"name": "LastUpdate",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			},
+			{
+				"name": "CreatedBy",
+				"type": "varchar"
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "DvLog"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

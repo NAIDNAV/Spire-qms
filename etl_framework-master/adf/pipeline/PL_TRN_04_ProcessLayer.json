@@ -1,0 +1,929 @@
+{
+	"name": "PL_TRN_04_ProcessLayer",
+	"properties": {
+		"activities": [
+			{
+				"name": "LookupDtBatch",
+				"description": "Executes the SP ‘sps_LookupDtBatch’ to get the information about batches for the layer and their order.",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[dbo].[sps_LookupDtBatch]",
+						"storedProcedureParameters": {
+							"FwkLayerId": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.LayerItem['FwkLayerId']",
+									"type": "Expression"
+								}
+							},
+							"FwkTriggerId": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.FwkTriggerId",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "DS_SQL_Configuration",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ForEachBatch",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "LookupDtBatch",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@array(activity('LookupDtBatch').output.value)",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "IfLayerIsStopped",
+							"type": "IfCondition",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@variables('varStopETLforBatch')",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "setVarStopETLforBatch",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "Execute PL_TRN_05_ProcessBatch",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "varStopETLforBatch",
+											"value": {
+												"value": "@activity('Execute PL_TRN_05_ProcessBatch').output.pipelineReturnValue['outputStopETL']",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "setOutputBatchStopOnFailureResult",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "Execute PL_TRN_05_ProcessBatch",
+												"dependencyConditions": [
+													"Failed"
+												]
+											}
+										],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "varStopETLforBatch",
+											"value": {
+												"value": "@activity('Execute PL_TRN_05_ProcessBatch').output.pipelineReturnValue['outputStopETL']",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "Execute PL_TRN_05_ProcessBatch",
+										"type": "ExecutePipeline",
+										"dependsOn": [],
+										"policy": {
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "PL_TRN_05_ProcessBatch",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"BatchItem": {
+													"value": "@item()",
+													"type": "Expression"
+												},
+												"LayerItem": {
+													"value": "@pipeline().parameters.LayerItem",
+													"type": "Expression"
+												},
+												"EntRunId": {
+													"value": "@pipeline().parameters.EntRunId",
+													"type": "Expression"
+												},
+												"EntTriggerTime": {
+													"value": "@pipeline().parameters.EntTriggerTime",
+													"type": "Expression"
+												},
+												"DtOrderItem": {
+													"value": "@pipeline().parameters.DtOrderItem",
+													"type": "Expression"
+												},
+												"ADFTriggerName": {
+													"value": "@pipeline().parameters.ADFTriggerName",
+													"type": "Expression"
+												}
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "If PostTransformationNotebookRun",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "ForEachBatch",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@not(equals(pipeline().parameters.LayerItem['PostTransformationNotebookRun'], null))",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "sp_FwkLogInsertPostTransformation",
+							"description": "Executes the SP spi_FwkLogInsert to insert record into FwkLog table with the execution module information by pipeline id and with null status.",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[spi_FwkLogInsert]",
+								"storedProcedureParameters": {
+									"EntRunId": {
+										"value": {
+											"value": "@pipeline().parameters.EntRunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Module": {
+										"value": {
+											"value": "@concat('Transformation > ',\n    pipeline().parameters.LayerItem['FwkLayerId'],\n    ' Layer > PostTransformationNotebook'\n)",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"ModuleRunId": {
+										"value": {
+											"value": "@concat(pipeline().RunId, '-post')",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"StartDate": {
+										"value": {
+											"value": "@formatdatetime(pipeline().TriggerTime)",
+											"type": "Expression"
+										},
+										"type": "DateTime"
+									},
+									"ADFTriggerName": {
+										"value": {
+											"value": "@pipeline().parameters.ADFTriggerName",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_configurationDB",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "DT_RunPostTransformationNotebook",
+							"type": "DatabricksNotebook",
+							"dependsOn": [
+								{
+									"activity": "sp_FwkLogInsertPostTransformation",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": {
+									"value": "@concat('/Code/compartment/', pipeline().parameters.LayerItem['PostTransformationNotebookRun'])",
+									"type": "Expression"
+								},
+								"baseParameters": {
+									"FwkTriggerId": {
+										"value": "@pipeline().parameters.FwkTriggerId",
+										"type": "Expression"
+									},
+									"ADFTriggerName": {
+										"value": "@pipeline().parameters.ADFTriggerName",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_databricks",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"ClusterId": {
+										"value": "@pipeline().parameters.LayerItem['ClusterId']",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "sp_UpdatePostTrasnformationLog_succeeded",
+							"description": "Executes the SP spu_FwkLogUpdate to update the record created by the ‘InsertIntoFwkLog’ activity in the table ‘FwkLog’ by updating the columns ‘PipelineStatus’ to ‘Success’.",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "DT_RunPostTransformationNotebook",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[spu_FwkLogUpdate]",
+								"storedProcedureParameters": {
+									"JobRunUrl": {
+										"value": {
+											"value": "@activity('DT_RunPostTransformationNotebook').output.runPageUrl",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"ModuleRunId": {
+										"value": {
+											"value": "@concat(pipeline().RunId, '-post')",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"PipelineStatus": {
+										"value": {
+											"value": "Succeeded",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_configurationDB",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "sp_UpdatePostTrasnformationLog_failed",
+							"description": "",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "DT_RunPostTransformationNotebook",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[spu_FwkLogUpdate]",
+								"storedProcedureParameters": {
+									"JobRunUrl": {
+										"value": {
+											"value": "@activity('DT_RunPostTransformationNotebook').output.runPageUrl",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"ModuleRunId": {
+										"value": {
+											"value": "@concat(pipeline().RunId, '-post')",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"PipelineStatus": {
+										"value": {
+											"value": "Failed",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_configurationDB",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "setPostTransformationNotebookOutput",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "sp_UpdatePostTrasnformationLog_succeeded",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "varPostTransformationNotebookOutput",
+								"value": {
+									"value": "@string(activity('DT_RunPostTransformationNotebook').output)",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "sp_UpdateForEachLog_failed",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "setOutputStopOnFailureResult",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spu_FwkLogUpdate]",
+					"storedProcedureParameters": {
+						"ErrorMessage": {
+							"value": null,
+							"type": "String"
+						},
+						"JobRunUrl": {
+							"value": null,
+							"type": "String"
+						},
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().parameters.ModuleRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStatus": {
+							"value": {
+								"value": "Failed",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_UpdatePostTransformationExecutionLog_failed",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "If PostTransformationNotebookRun",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spu_FwkLogUpdate]",
+					"storedProcedureParameters": {
+						"ErrorMessage": {
+							"value": null,
+							"type": "String"
+						},
+						"JobRunUrl": {
+							"value": null,
+							"type": "String"
+						},
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().parameters.ModuleRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStatus": {
+							"value": {
+								"value": "Failed",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "IfStopETL",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "IfWorkflowDefined",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@if(contains(json(variables('varPostTransformationNotebookOutput')), 'runOutput'),\n\tif(contains(json(variables('varPostTransformationNotebookOutput')).runOutput, 'stopETL'), \n\t\tjson(variables('varPostTransformationNotebookOutput')).runOutput['stopETL'], \n\t\t'false'\n\t),\n'false')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "sp_UpdateExecutionLog_succeeded",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[spu_FwkLogUpdate]",
+								"storedProcedureParameters": {
+									"ErrorMessage": {
+										"value": null,
+										"type": "String"
+									},
+									"JobRunUrl": {
+										"value": null,
+										"type": "String"
+									},
+									"ModuleRunId": {
+										"value": {
+											"value": "@pipeline().parameters.ModuleRunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"PipelineStatus": {
+										"value": {
+											"value": "@if(greater(activity('LookupDtBatch').output.count, 0), 'Succeeded', 'Skipped')",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_configurationDB",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "setOutputStopETLFalse",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "sp_UpdateExecutionLog_succeeded",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "pipelineReturnValue",
+								"value": [
+									{
+										"key": "outputStopETL",
+										"value": {
+											"type": "Boolean",
+											"content": false
+										}
+									}
+								],
+								"setSystemVariable": true
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "sp_UpdateExecutionLog_Stopped",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[spu_FwkLogUpdate]",
+								"storedProcedureParameters": {
+									"ErrorMessage": {
+										"value": null,
+										"type": "String"
+									},
+									"JobRunUrl": {
+										"value": null,
+										"type": "String"
+									},
+									"ModuleRunId": {
+										"value": {
+											"value": "@pipeline().parameters.ModuleRunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"PipelineStatus": {
+										"value": {
+											"value": "Stopped - Request from PostTransformationNotebook",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_configurationDB",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "setOutputStopETLTrue",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "sp_UpdateExecutionLog_Stopped",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "pipelineReturnValue",
+								"value": [
+									{
+										"key": "outputStopETL",
+										"value": {
+											"type": "Boolean",
+											"content": true
+										}
+									}
+								],
+								"setSystemVariable": true
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "IfWorkflowDefined",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "If PostTransformationNotebookRun",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@if(contains(json(variables('varPostTransformationNotebookOutput')), 'runOutput'),\n\tif(contains(json(variables('varPostTransformationNotebookOutput')).runOutput, 'workflow'),\n\t\tcontains(string(json(variables('varPostTransformationNotebookOutput')).runOutput), 'WorkflowId'),\n\t\t'false'\n\t),\n'false')",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Execute PL_TriggerWorkflow",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_TriggerWorkflow",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Workflow": {
+										"value": "@json(variables('varPostTransformationNotebookOutput')).runOutput['workflow']",
+										"type": "Expression"
+									},
+									"EntRunId": {
+										"value": "@pipeline().parameters.EntRunId",
+										"type": "Expression"
+									},
+									"Module": {
+										"value": "@concat('Transformation > ',\n    pipeline().parameters.LayerItem['FwkLayerId'], ' Layer'\n)",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "sp_UpdateWorkflowExecutionExecutionLog_failed",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "IfWorkflowDefined",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spu_FwkLogUpdate]",
+					"storedProcedureParameters": {
+						"ErrorMessage": {
+							"value": null,
+							"type": "String"
+						},
+						"JobRunUrl": {
+							"value": null,
+							"type": "String"
+						},
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().parameters.ModuleRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStatus": {
+							"value": {
+								"value": "Failed",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "setOutputStopOnFailure",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "sp_UpdatePostTransformationExecutionLog_failed",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "pipelineReturnValue",
+					"value": [
+						{
+							"key": "outputStopETL",
+							"value": {
+								"type": "Boolean",
+								"content": true
+							}
+						}
+					],
+					"setSystemVariable": true
+				}
+			},
+			{
+				"name": "setOutputStopOnFailureResult",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "ForEachBatch",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "pipelineReturnValue",
+					"value": [
+						{
+							"key": "outputStopETL",
+							"value": {
+								"type": "Expression",
+								"content": "@or(\n    if(\n    equals(\n        toUpper(string(pipeline().parameters.LayerItem['StopIfFailure'])),\n         'TRUE'\n    ), \n    true,\n    false\n    ),\nvariables('varStopETLforBatch')\n)"
+							}
+						}
+					],
+					"setSystemVariable": true
+				}
+			},
+			{
+				"name": "setOutputStopOnFailureWorkflowFailure",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "sp_UpdateWorkflowExecutionExecutionLog_failed",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "pipelineReturnValue",
+					"value": [
+						{
+							"key": "outputStopETL",
+							"value": {
+								"type": "Boolean",
+								"content": true
+							}
+						}
+					],
+					"setSystemVariable": true
+				}
+			}
+		],
+		"parameters": {
+			"LayerItem": {
+				"type": "array"
+			},
+			"EntRunId": {
+				"type": "string"
+			},
+			"EntTriggerTime": {
+				"type": "string"
+			},
+			"FwkTriggerId": {
+				"type": "string"
+			},
+			"DtOrderItem": {
+				"type": "array"
+			},
+			"ModuleRunId": {
+				"type": "string"
+			},
+			"ADFTriggerName": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"varPostTransformationNotebookOutput": {
+				"type": "String",
+				"defaultValue": "{}"
+			},
+			"varStopETLforBatch": {
+				"type": "Boolean",
+				"defaultValue": false
+			}
+		},
+		"folder": {
+			"name": "02 Transformation Module"
+		},
+		"annotations": []
+	}
+}

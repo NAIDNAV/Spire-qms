@@ -1,0 +1,669 @@
+{
+	"name": "PL_ING_03_02_SQLOnPremDeltaLoad",
+	"properties": {
+		"activities": [
+			{
+				"name": "Delta Copy into Landing",
+				"description": "Copy a table from a database to the configurated Sink dynamically taking by input FwkItem, SrcPath.",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "IF numeric",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "LookupOldWmkConfig",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": {
+							"value": "@concat(\n    'SELECT * FROM (',\n        if(empty(string(pipeline().parameters.FwkItem['Query'])),\n            concat('SELECT ', coalesce(pipeline().parameters.FwkItem['SelectedColumnNames'], '*'), ' FROM ', pipeline().parameters.FwkItem['SchemaName'], '.', pipeline().parameters.FwkItem['EntityName'], ' ', pipeline().parameters.FwkItem['TableHint'])\n            , pipeline().parameters.FwkItem['Query']\n          ),\n    ') T1 WHERE ( ''', pipeline().parameters.FwkItem['WmkDataType'], ''' = ''datetime'' AND ', pipeline().parameters.FwkItem['WmkColumnName'], ' > ''', convertToUtc(activity('LookupOldWmkConfig').output.firstRow.NewValueWatermark, 'UTC', 'yyyy-MM-ddTHH:mm:ss'), '''',' ) \n\t \t\tOR ( ''', pipeline().parameters.FwkItem['WmkDataType'], ''' = ''numeric'' AND ', pipeline().parameters.FwkItem['WmkColumnName'], ' > ''', coalesce(activity('LookupOldWmkConfig').output.firstRow.NewValueWatermark, 0), '''', ' )\n            OR ( ''', pipeline().parameters.FwkItem['WmkDataType'], ''' = ''stringDatetime'' AND convert(datetime, ', pipeline().parameters.FwkItem['WmkColumnName'], ') > ''', convertToUtc(activity('LookupOldWmkConfig').output.firstRow.NewValueWatermark, 'UTC', 'yyyy-MM-ddTHH:mm:ss'), '''',')',\n    ' ', pipeline().parameters.FwkItem['QueryHint']\n)",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "ParquetSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "ParquetWriteSettings"
+						}
+					},
+					"enableStaging": false,
+					"validateDataConsistency": true
+				},
+				"inputs": [
+					{
+						"referenceName": "DS_SQLOnPrem_Source",
+						"type": "DatasetReference",
+						"parameters": {
+							"FwkItem": {
+								"value": "@pipeline().parameters.FwkItem",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "DS_ADLS_PRQ_Sink",
+						"type": "DatasetReference",
+						"parameters": {
+							"InstanceURL": {
+								"value": "@pipeline().parameters.FwkItem['SinkInstanceURL']",
+								"type": "Expression"
+							},
+							"FullPath": {
+								"value": "@concat(pipeline().parameters.FwkItem['SinkPath'], \n\t'/',\n\tformatDateTime(pipeline().parameters.PL_01TriggerTime,'yyyy'),\n\tformatDateTime(pipeline().parameters.PL_01TriggerTime,'MM'),\n\tformatDateTime(pipeline().parameters.PL_01TriggerTime,'dd'),\n\tformatDateTime(pipeline().parameters.PL_01TriggerTime,'HH'),\n\tformatDateTime(pipeline().parameters.PL_01TriggerTime,'mm'),\n\t'_',\n\tpipeline().parameters.FwkItem['EntityName'],\n\t'.snappy.parquet'\n)",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "spu_UpdateWmk",
+				"description": "Executes the SP ‘spu_FwkWatermarkIntUpdate’ to Update the watermark value for objects using watermark datatype \"1\"",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Delta Copy into Landing",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spu_IngtWatermarkUpdate]",
+					"storedProcedureParameters": {
+						"FwkEntityId": {
+							"value": {
+								"value": "@pipeline().parameters.FwkItem['FwkEntityId']",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"NewValueWmkInt": {
+							"value": {
+								"value": "@if(equals(pipeline().parameters.FwkItem['WmkDataType'], 'numeric'), activity('LookupNewWmkSrc').output.firstRow.NewWatermarkValue, null)",
+								"type": "Expression"
+							},
+							"type": "Int64"
+						},
+						"NewValueWmkDt": {
+							"value": {
+								"value": "@if(equals(pipeline().parameters.FwkItem['WmkDataType'], 'datetime'), convertToUtc(pipeline().parameters.PL_01TriggerTime, 'UTC', 'yyyy-MM-ddTHH:mm:ss'), if(equals(pipeline().parameters.FwkItem['WmkDataType'], 'stringDatetime'), pipeline().parameters.PL_01TriggerTime, null))",
+								"type": "Expression"
+							},
+							"type": "Datetime"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "spi_NewRowsToWmkInt",
+				"description": "Executes the SP ‘spi_FwkWatermarkInsert’ to create watermark for the source object.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "spi_IngtLogInsert",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spi_IngtWatermarkInsert]",
+					"storedProcedureParameters": {
+						"FwkEntityId": {
+							"value": {
+								"value": "@pipeline().parameters.FwkItem['FwkEntityId']",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"WmkDataType": {
+							"value": {
+								"value": "@pipeline().parameters.FwkItem['WmkDataType']",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "LookupOldWmkConfig",
+				"description": "Executes the SP ‘sps_LookupIngtWatermark’ to retrieve the information from the table  ‘FwkWatermark’ by SrcObjectChild and FwkTriggerId.",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "spi_NewRowsToWmkInt",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[dbo].[sps_LookupIngtWatermark]",
+						"storedProcedureParameters": {
+							"FwkEntityId": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.FwkItem['FwkEntityId']",
+									"type": "Expression"
+								}
+							},
+							"WmkDataType": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.FwkItem['WmkDataType']",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "DS_SQL_Configuration",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": true
+				}
+			},
+			{
+				"name": "IF numeric",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "spi_NewRowsToWmkInt",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(pipeline().parameters.FwkItem['WmkDataType'], 'numeric')\n",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "LookupNewWmkSrc",
+							"description": "Executes a query to the ‘FwkWatermark’ table  to get the ‘NewWatermarkValue’ column value.",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlServerSource",
+									"sqlReaderQuery": {
+										"value": "SELECT MAX(@{pipeline().parameters.FwkItem['WmkColumnName']}) as NewWatermarkValue from [@{pipeline().parameters.FwkItem['SchemaName']}].[@{pipeline().parameters.FwkItem['EntityName']}]",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "DS_SQLOnPrem_Source",
+									"type": "DatasetReference",
+									"parameters": {
+										"FwkItem": {
+											"value": "@pipeline().parameters.FwkItem",
+											"type": "Expression"
+										}
+									}
+								},
+								"firstRowOnly": true
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "spi_IngtIfNumeric_failed",
+				"description": "Executes the SP spi_IngtLogInsert to insert record into IngtLog table with the execution module information.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "IF numeric",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spi_IngtLogInsert]",
+					"storedProcedureParameters": {
+						"IngtOutputId": {
+							"value": {
+								"value": "@pipeline().parameters.FwkItem['IngtOutputId']",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"EntRunId": {
+							"value": {
+								"value": "@pipeline().parameters.EntRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().parameters.ModuleRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStatus": {
+							"value": "Failed",
+							"type": "String"
+						},
+						"StartDate": {
+							"value": {
+								"value": "@formatdatetime(pipeline().TriggerTime)",
+								"type": "Expression"
+							},
+							"type": "Datetime"
+						},
+						"RowsRead": {
+							"value": null,
+							"type": "Int64"
+						},
+						"RowsCopied": {
+							"value": null,
+							"type": "Int64"
+						},
+						"CopyDuration": {
+							"value": null,
+							"type": "Double"
+						},
+						"Throughput": {
+							"value": null,
+							"type": "Double"
+						},
+						"ErrorMessage": {
+							"value": null,
+							"type": "String"
+						},
+						"FileName": {
+							"value": null,
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "spi_IngtLogInsert",
+				"description": "Executes the SP spi_IngtLogInsert to insert record into IngtLog table with the execution module information.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spi_IngtLogInsert]",
+					"storedProcedureParameters": {
+						"IngtOutputId": {
+							"value": {
+								"value": "@pipeline().parameters.FwkItem['IngtOutputId']",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"EntRunId": {
+							"value": {
+								"value": "@pipeline().parameters.EntRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().parameters.ModuleRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStatus": {
+							"value": {
+								"value": "InProgress",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"StartDate": {
+							"value": {
+								"value": "@formatdatetime(pipeline().TriggerTime)",
+								"type": "Expression"
+							},
+							"type": "Datetime"
+						},
+						"RowsRead": {
+							"value": null,
+							"type": "Int64"
+						},
+						"RowsCopied": {
+							"value": null,
+							"type": "Int64"
+						},
+						"CopyDuration": {
+							"value": null,
+							"type": "Double"
+						},
+						"Throughput": {
+							"value": null,
+							"type": "Double"
+						},
+						"ErrorMessage": {
+							"value": null,
+							"type": "String"
+						},
+						"FileName": {
+							"value": null,
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "spu_IngtLogUpdate_succeeded",
+				"description": "Executes the SP spu_IngtLogUpdate to update record into IngtLog table with the execution module information.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "spu_UpdateWmk",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spu_IngtLogUpdate]",
+					"storedProcedureParameters": {
+						"IngtOutputId": {
+							"value": {
+								"value": "@pipeline().parameters.FwkItem['IngtOutputId']",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"EntRunId": {
+							"value": {
+								"value": "@pipeline().parameters.EntRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().parameters.ModuleRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStatus": {
+							"value": {
+								"value": "Succeeded",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"RowsRead": {
+							"value": {
+								"value": "@if(\n    contains(activity('Delta Copy into Landing').output, 'rowsRead'),\n    activity('Delta Copy into Landing').output.rowsRead,\n    null\n)",
+								"type": "Expression"
+							},
+							"type": "Int64"
+						},
+						"RowsCopied": {
+							"value": {
+								"value": "@if(\n    contains(activity('Delta Copy into Landing').output, 'rowsCopied'),\n    activity('Delta Copy into Landing').output.rowsCopied,\n    null\n)",
+								"type": "Expression"
+							},
+							"type": "Int64"
+						},
+						"CopyDuration": {
+							"value": {
+								"value": "@if(\n    contains(activity('Delta Copy into Landing').output, 'copyDuration'),\n    activity('Delta Copy into Landing').output.copyDuration,\n    null\n)",
+								"type": "Expression"
+							},
+							"type": "Double"
+						},
+						"Throughput": {
+							"value": {
+								"value": "@if(\n    contains(activity('Delta Copy into Landing').output, 'throughput'),\n    activity('Delta Copy into Landing').output.throughput,\n    null\n)",
+								"type": "Expression"
+							},
+							"type": "Double"
+						},
+						"ErrorMessage": {
+							"value": null,
+							"type": "String"
+						},
+						"RowsSkipped": {
+							"value": null,
+							"type": "Int64"
+						},
+						"LogFilePath": {
+							"value": null,
+							"type": "String"
+						},
+						"FileName": {
+							"value": null,
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "spu_IngtLogUpdate_failed",
+				"description": "Executes the SP spu_IngtLogUpdate to update record into IngtLog table with the execution module information.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Delta Copy into Landing",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spu_IngtLogUpdate]",
+					"storedProcedureParameters": {
+						"IngtOutputId": {
+							"value": {
+								"value": "@pipeline().parameters.FwkItem['IngtOutputId']",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"EntRunId": {
+							"value": {
+								"value": "@pipeline().parameters.EntRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().parameters.ModuleRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStatus": {
+							"value": {
+								"value": "Failed",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"RowsRead": {
+							"value": null,
+							"type": "Int64"
+						},
+						"RowsCopied": {
+							"value": null,
+							"type": "Int64"
+						},
+						"CopyDuration": {
+							"value": null,
+							"type": "Double"
+						},
+						"Throughput": {
+							"value": null,
+							"type": "Double"
+						},
+						"ErrorMessage": {
+							"value": {
+								"value": "@if(\n    and(\n        contains(activity('Delta Copy into Landing').output, 'errors'),\n        greater(length(activity('Delta Copy into Landing').output.errors), 0)\n    ),\n    activity('Delta Copy into Landing').output.errors[0].Message,\n    null\n)",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"RowsSkipped": {
+							"value": null,
+							"type": "Int64"
+						},
+						"LogFilePath": {
+							"value": null,
+							"type": "String"
+						},
+						"FileName": {
+							"value": null,
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"FwkItem": {
+				"type": "array"
+			},
+			"PL_01TriggerTime": {
+				"type": "string"
+			},
+			"EntRunId": {
+				"type": "string"
+			},
+			"ModuleRunId": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "01 Ingestion Module/03 SQLOnPrem"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-07-06T08:29:14Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

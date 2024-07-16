@@ -1,0 +1,362 @@
+{
+	"name": "PL_EXP_02_03_SQLExport",
+	"properties": {
+		"activities": [
+			{
+				"name": "Export File to SQL",
+				"description": "Copy a table from a adls to the configurated Sink  database dynamically taking by input FwkItem, Path.",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "spi_ExpLogInsert",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"preCopyScript": {
+							"value": "\n@{if(\n    equals(pipeline().parameters.FwkItem['SinkParams'], null),\n    '',\n    if(\n        contains(json(pipeline().parameters.FwkItem['SinkParams']), 'preCopyScript'),\n        json(pipeline().parameters.FwkItem['SinkParams']).preCopyScript,\n        ''\n    )\n)}",
+							"type": "Expression"
+						},
+						"writeBehavior": "insert",
+						"sqlWriterUseTableLock": false,
+						"tableOption": "autoCreate",
+						"disableMetricsCollection": false
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "DS_ADLS_CSV_File_Export",
+						"type": "DatasetReference",
+						"parameters": {
+							"FwkItem": {
+								"value": "@pipeline().parameters.FwkItem",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "DS_SQL_Sink",
+						"type": "DatasetReference",
+						"parameters": {
+							"FwkItem": {
+								"value": "@pipeline().parameters.FwkItem",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "spu_ExpLogUpdate_succeeded",
+				"description": "Executes the SP spu_ExpLogUpdate to update record into ExpLog table with the execution module information.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Delete Temp Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spu_ExpLogUpdate]",
+					"storedProcedureParameters": {
+						"ExpOutputId": {
+							"value": {
+								"value": "@pipeline().parameters.FwkItem['ExpOutputId']",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"EntRunId": {
+							"value": {
+								"value": "@pipeline().parameters.EntRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().parameters.ModuleRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStatus": {
+							"value": {
+								"value": "Succeeded",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"CopyDuration": {
+							"value": {
+								"value": "@if(\n    contains(activity('Export File to SQL').output, 'copyDuration'),\n    activity('Export File to SQL').output.copyDuration,\n    null\n)",
+								"type": "Expression"
+							},
+							"type": "Double"
+						},
+						"Throughput": {
+							"value": {
+								"value": "@if(\n    contains(activity('Export File to SQL').output, 'throughput'),\n    activity('Export File to SQL').output.throughput,\n    null\n)",
+								"type": "Expression"
+							},
+							"type": "Double"
+						},
+						"ErrorMessage": {
+							"value": null,
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "spu_ExpLogUpdate_failed",
+				"description": "Executes the SP spu_ExpLogUpdate to update record into ExpLog table with the execution module information.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Export File to SQL",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spu_ExpLogUpdate]",
+					"storedProcedureParameters": {
+						"ExpOutputId": {
+							"value": {
+								"value": "@pipeline().parameters.FwkItem['ExpOutputId']",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"EntRunId": {
+							"value": {
+								"value": "@pipeline().parameters.EntRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().parameters.ModuleRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStatus": {
+							"value": {
+								"value": "Failed",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"CopyDuration": {
+							"value": null,
+							"type": "Double"
+						},
+						"Throughput": {
+							"value": null,
+							"type": "Double"
+						},
+						"ErrorMessage": {
+							"value": {
+								"value": "@if(\n    and(\n        contains(activity('Export File to SQL').output, 'errors'),\n        greater(length(activity('Export File to SQL').output.errors), 0)\n    ),\n    activity('Export File to SQL').output.errors[0].Message,\n    null\n)",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "spi_ExpLogInsert",
+				"description": "Executes the SP spi_ExpLogInsert to insert record into ExpLog table with the execution module information.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spi_ExpLogInsert]",
+					"storedProcedureParameters": {
+						"ExpOutputId": {
+							"value": {
+								"value": "@pipeline().parameters.FwkItem['ExpOutputId']",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"EntRunId": {
+							"value": {
+								"value": "@pipeline().parameters.EntRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().parameters.ModuleRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStatus": {
+							"value": {
+								"value": "InProgress",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"StartDate": {
+							"value": {
+								"value": "@formatdatetime(pipeline().TriggerTime)",
+								"type": "Expression"
+							},
+							"type": "Datetime"
+						},
+						"CopyDuration": {
+							"value": null,
+							"type": "Double"
+						},
+						"Throughput": {
+							"value": null,
+							"type": "Double"
+						},
+						"ErrorMessage": {
+							"value": null,
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Delete Temp Files",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "Export File to SQL",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "DS_ADLS_CSV_File_Export",
+						"type": "DatasetReference",
+						"parameters": {
+							"FwkItem": {
+								"value": "@pipeline().parameters.FwkItem",
+								"type": "Expression"
+							}
+						}
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					}
+				}
+			}
+		],
+		"parameters": {
+			"FwkItem": {
+				"type": "array"
+			},
+			"PL_01TriggerTime": {
+				"type": "string"
+			},
+			"EntRunId": {
+				"type": "string"
+			},
+			"ModuleRunId": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "03 Export Module"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-07-06T08:29:14Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

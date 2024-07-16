@@ -1,0 +1,227 @@
+{
+	"name": "PL_PipelineRunStatus",
+	"properties": {
+		"activities": [
+			{
+				"name": "get_pipeline_details",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"url": {
+						"value": "@concat(pipeline().parameters.AzureRestApiUrl,'/providers/Microsoft.DataFactory/factories/',pipeline().DataFactory,'/queryPipelineRuns?api-version=2018-06-01')",
+						"type": "Expression"
+					},
+					"body": {
+						"value": "@concat('{\n  \"lastUpdatedAfter\": \"', subtractFromTime(utcNow(),1,'Day'),'\",\n  \"lastUpdatedBefore\":\"', utcNow(),'\",\n  \"filters\": [\n    {\n      \"operand\": \"PipelineName\",\n      \"operator\": \"In\",\n      \"values\": [\"PL_MasterPipeline\",\"PL_ETLPipeline\"]\n    },\n    { \n      \"operand\": \"Status\", \n      \"operator\": \"In\", \n      \"values\": [ \"InProgress\", \"Queued\"] \n      }\n      ]\n}')",
+						"type": "Expression"
+					},
+					"authentication": {
+						"type": "MSI",
+						"resource": {
+							"value": "https://management.azure.com/",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Filter Running Pipeline",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "get_pipeline_details",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('get_pipeline_details').output.value",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@and(\n    not(\n        equals(item().runId,pipeline().parameters.MasterRunId)\n    ),\n    equals(item().parameters['ADFTriggerName'],pipeline().parameters.ADFTriggerName)\n)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "ForEachRunningPipeline",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Set ETLPipelineTriggerStatus_Continue",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Filter Running Pipeline').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "CancelIFAlreadyRunning",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "Set ContinueWithETLRun_False",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(\n    toUpper(string(pipeline().parameters.CancelIfAlreadyRunning)),'TRUE'\n    )        \n",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "Fail ETL pipeline Run",
+										"type": "Fail",
+										"dependsOn": [
+											{
+												"activity": "Log Cancelled",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"userProperties": [],
+										"typeProperties": {
+											"message": {
+												"value": "Cancelled pipeline since same paramater pipeline already Running",
+												"type": "Expression"
+											},
+											"errorCode": "403"
+										}
+									},
+									{
+										"name": "Log Cancelled",
+										"type": "ExecutePipeline",
+										"dependsOn": [],
+										"policy": {
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "PL_LogToMattermost",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"Message": {
+													"value": "@concat('Execution of pipeline ''PL_MasterPipeline'' for FwkTriggerId **', pipeline().parameters.ADFTriggerName,'** will not start because another pipeline with same paramters is runnning')",
+													"type": "Expression"
+												},
+												"EntRunId": {
+													"value": "@pipeline().GroupId",
+													"type": "Expression"
+												}
+											}
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "Set ContinueWithETLRun_False",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "pipelineReturnValue",
+								"value": [
+									{
+										"key": "ContinueWithETLPipelineRun",
+										"value": {
+											"type": "Boolean",
+											"content": false
+										}
+									}
+								],
+								"setSystemVariable": true
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Set ETLPipelineTriggerStatus_Continue",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Filter Running Pipeline",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "pipelineReturnValue",
+					"value": [
+						{
+							"key": "ContinueWithETLPipelineRun",
+							"value": {
+								"type": "Boolean",
+								"content": true
+							}
+						}
+					],
+					"setSystemVariable": true
+				}
+			}
+		],
+		"parameters": {
+			"AzureRestApiUrl": {
+				"type": "string",
+				"defaultValue": "https://management.azure.com//subscriptions/775f9e05-bbee-446a-aa43-3d2296410d19/resourceGroups/0001-d-cpmef"
+			},
+			"CancelIfAlreadyRunning": {
+				"type": "string"
+			},
+			"ADFTriggerName": {
+				"type": "string",
+				"defaultValue": "none"
+			},
+			"FwkLayerId": {
+				"type": "string",
+				"defaultValue": "none"
+			},
+			"MasterRunId": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "99 Utils"
+		},
+		"annotations": []
+	}
+}

@@ -1,0 +1,68 @@
+{
+    "Microsoft.DataFactory/factories/pipelines": {
+        "properties": {
+            "parameters": {
+                "Channel": {
+                    "defaultValue": "="
+                },
+                "MatterMostWebHookURL": {
+                    "defaultValue": "="
+                },
+                "secretURL": {
+                    "defaultValue": "="
+                },
+                "EventGridUrl": {
+                    "defaultValue": "="
+                },
+                "CryptoKeySecretScope": {
+                    "defaultValue": "="
+                },
+                "MdcPath": {
+                    "defaultValue": "="
+                },
+                "DlPath": {
+                    "defaultValue": "="
+                },
+                "LzPath": {
+                    "defaultValue": "="
+                },
+                "AzureRestApiUrl": {
+                    "defaultValue": "="
+                }
+            }
+        }
+    },
+    "Microsoft.DataFactory/factories/integrationRuntimes": {
+        "properties": {
+            "typeProperties": {
+                "linkedInfo": {
+                    "resourceId": "="
+                }
+            }
+        }
+    },
+    "Microsoft.DataFactory/factories/triggers": {},
+    "Microsoft.DataFactory/factories/linkedServices": {
+        "*": {
+            "properties": {
+                "parameters": {
+                    "ClusterId": {
+                        "defaultValue": "="
+                    }
+                },
+                "typeProperties": {
+                    "connectionString": {
+                        "secretName": "="
+                    },
+                    "url": "=",
+                    "baseUrl": "=",
+                    "domain": "=",
+                    "workspaceResourceId": "=",
+                    "encryptedCredential": "=",
+                    "existingClusterId": "="
+                }
+            }
+        }
+    },
+    "Microsoft.DataFactory/factories/datasets": {}
+}

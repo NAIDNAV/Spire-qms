@@ -1,0 +1,52 @@
+[
+    {
+        "Key": "value",
+        "Entities": [
+            {
+                "EntityName": "DatabaseName_Mandatory"
+            },
+            {
+                "DatabaseName": "EntityName_Mandatory"
+            },
+            {
+                "DatabaseName": "Database",
+                "EntityName": "Params_NotValidJSON",
+                "Params": "not valid JSON"
+            },
+            {
+                "DatabaseName": "Database",
+                "EntityName": "Params_WithExtraKey",
+                "Params": {
+                    "extraKey": "should not be here"
+                }
+            },
+            {
+                "DatabaseName": "Database",
+                "EntityName": "Params.WriteMode_InvalidValueForHistorization",
+                "Params": {
+                    "writeMode": "invalid value"
+                }
+            },
+            {
+                "DatabaseName": "Database",
+                "EntityName": "Params.KeyColumns_MandatoryForWriteModeSnapshot",
+                "Params": {
+                    "writeMode": "Snapshot"
+                }
+            },
+            {
+                "DatabaseName": "Database",
+                "EntityName": "Params.FwkTriggerId_NonExisting",
+                "Params": {
+                    "fwkTriggerId": "nonExisting"
+                }
+            },
+            {
+                "EntityName": "Params.BatchNumber_IsNotINT",
+                "Params": {
+                    "batchNumber": "StringValue"
+                }
+            }
+        ]
+    }
+]

@@ -1,0 +1,42 @@
+[
+    {
+        "ReferenceKey1": "RevisionNumber",
+        "Value1": "1",
+        "Description1": "Reference key-value description",
+        "ReferenceKey2": "Status",
+        "Value2": "1",
+        "Description2": "Reference key-value description"
+    },
+    {
+        "ReferenceKey1": "RevisionNumber",
+        "Value1": "1",
+        "Description1": "Reference key-value description",
+        "ReferenceKey2": "Status",
+        "Value2": "2",
+        "Description2": "Reference key-value description"
+    },
+    {
+        "ReferenceKey1": "RevisionNumber",
+        "Value1": "2",
+        "Description1": "Reference key-value description",
+        "ReferenceKey2": "Status",
+        "Value2": "3",
+        "Description2": "Reference key-value description"
+    },
+    {
+        "ReferenceKey1": "RevisionNumber",
+        "Value1": "2",
+        "Description1": "Reference key-value description",
+        "ReferenceKey2": "Status",
+        "Value2": "4",
+        "Description2": "Reference key-value description"
+    },
+    {
+        "ReferenceKey1": "RevisionNumber",
+        "Value1": "2",
+        "Description1": "Reference key-value description",
+        "ReferenceKey2": "Status",
+        "Value2": "5",
+        "Description2": "Reference key-value description"
+    }
+]

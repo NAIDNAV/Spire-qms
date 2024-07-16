@@ -1,0 +1,172 @@
+[
+    {
+        "FwkLinkedServiceId": "NonExisting",
+        "Entities": [
+            {
+                "Entity": "FwkLinkedServiceId_NonExisting",
+                "TypeLoad": "Full"
+            }
+        ]
+    },
+    {
+        "FwkLinkedServiceId": "SourceCSV",
+        "Entities": [
+            {
+                "Entity": "Path_MandatoryWhenIngestingFromFile",
+                "SourceParams": {
+                    "columnDelimiter": ";"
+                },
+                "TypeLoad": "Full"
+            }
+        ]
+    },
+    {
+        "FwkLinkedServiceId": "LandingADLS",
+        "Entities": [
+            {
+                "Entity": "Path_WithContainerNameMandatoryWhenIngestingFromFile",
+                "Path": "file.csv",
+                "SourceParams": {
+                    "columnDelimiter": ";"
+                },
+                "TypeLoad": "Full"
+            }
+        ]
+    },
+    {
+        "FwkLinkedServiceId": "SourceSQL",
+        "Entities": [
+            {
+                "TypeLoad": "Full"
+            },
+            {
+                "Entity": "Params_NotValidJSON",
+                "Params": "not valid JSON",
+                "TypeLoad": "Full"
+            },
+            {
+                "Entity": "Params_WithExtraKey",
+                "Params": {
+                    "sinkEntityName": "Customer_Full",
+                    "fwkTriggerId": "Weekly",
+                    "extraKey": "should not be here"
+                },
+                "TypeLoad": "Full"
+            },
+            {
+                "Entity": "Params_WithMultipleArchivePath",
+                "Path": "file.csv",
+                "Params": {
+                    "archivePath": "path/archive"
+                },
+                "SourceParams": {
+                    "columnDelimiter": ";"
+                },
+                "TypeLoad": "Full"
+            },
+            {
+                "Entity": "MetadataParams_NotValidJSON",
+                "MetadataParams": "not valid JSON",
+                "TypeLoad": "Full"
+            },
+            {
+                "Entity": "MetadataParams_WithExtraKey",
+                "MetadataParams": {
+                    "primaryColumns": "ColumnA",
+                    "wmkDataType": "datetime",
+                    "extraKey": "should not be here"
+                },
+                "TypeLoad": "Full"
+            },
+            {
+                "Entity": "MetadataParams.WmkDataType_InvalidValue",
+                "MetadataParams": {
+                    "wmkDataType": "invalid value"
+                },
+                "TypeLoad": "Full"
+            },
+            {
+                "Entity": "MetadataParams.WmkDataType_MandatoryWhenDeltaLoadUsingQuery",
+                "MetadataParams": {
+                    "primaryColumns": "ColumnA"
+                },
+                "TypeLoad": "Delta",
+                "WmkColumnName": "ColumnA",
+                "Query": "SELECT * FROM TableA"
+            },
+            {
+                "Entity": "SourceParams_NotValidJSON",
+                "Path": "file.csv",
+                "Params": {
+                    "archivePath": "path/archive"
+                },
+                "SourceParams": "not valid JSON",
+                "TypeLoad": "Full"
+            },
+            {
+                "Entity": "SourceParams_MandatoryWhenIngestingFromFile",
+                "Path": "file.csv",
+                "TypeLoad": "Full"
+            },
+            {
+                "Entity": "SourceParams_ShouldNotBeSetWhenIngestingFromDB",
+                "SourceParams": {
+                    "columnDelimiter": ";"
+                },
+                "TypeLoad": "Full"
+            },
+            {
+                "Entity": "TypeLoad_Mandatory"
+            },
+            {
+                "Entity": "TypeLoad_InvalidValue",
+                "TypeLoad": "invalid value"
+            },
+            {
+                "Entity": "TypeLoad_OnlyFullLoadAllowedWhenIngestingFromFile",
+                "Path": "file.csv",
+                "SourceParams": {
+                    "columnDelimiter": ";"
+                },
+                "TypeLoad": "Delta",
+                "WmkColumnName": "ColumnA"
+            },
+            {
+                "Entity": "WmkColumnName_MandatoryWhenDeltaLoad",
+                "TypeLoad": "Delta"
+            },
+            {
+                "Entity": "WmkColumnName_ShouldNotBeSetWhenFullLoad",
+                "TypeLoad": "Full",
+                "WmkColumnName": "should not be set"
+            },
+            {
+                "Entity": "TableHint_ShouldNotBeSetWhenIngestingFromFile",
+                "Path": "file.csv",
+                "SourceParams": {
+                    "columnDelimiter": ";"
+                },
+                "TypeLoad": "Full",
+                "TableHint": "hint"
+            },
+            {
+                "Entity": "QueryHint_ShouldNotBeSetWhenIngestingFromFile",
+                "Path": "file.csv",
+                "SourceParams": {
+                    "columnDelimiter": ";"
+                },
+                "TypeLoad": "Full",
+                "QueryHint": "hint"
+            },
+            {
+                "Entity": "Query_ShouldNotBeSetWhenIngestingFromFile",
+                "Path": "file.csv",
+                "SourceParams": {
+                    "columnDelimiter": ";"
+                },
+                "TypeLoad": "Full",
+                "Query": "SELECT * FROM TableA"
+            }
+        ]
+    }
+]

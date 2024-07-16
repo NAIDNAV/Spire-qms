@@ -1,0 +1,578 @@
+[
+    {
+        "FwkLinkedServiceId": "SourceCSV",
+        "Entities": [
+            {
+                "Entity": "CustomerZIPCSV",
+                "Path": "CustomerCsv.zip",
+                "SourceParams": {
+                    "columnDelimiter": ";",
+                    "rowDelimiter": "\r\n",
+                    "compressionType": "ZipDeflate",
+                    "compressionLevel": "Optimal",
+                    "encodingName": "UTF-8",
+                    "escapeChar": "\\",
+                    "firstRowAsHeader": true,
+                    "nullValue": "",
+                    "quoteChar": "\"",
+                    "skipLineCount": 0
+                },
+                "TypeLoad": "Full"
+            },
+            {
+                "Entity": "CustomerCSV",
+                "Path": "CustomerCsv.csv",
+                "SourceParams": {
+                    "columnDelimiter": ";",
+                    "rowDelimiter": "\r\n",
+                    "compressionType": "None",
+                    "compressionLevel": "",
+                    "encodingName": "UTF-8",
+                    "escapeChar": "\\",
+                    "firstRowAsHeader": true,
+                    "nullValue": "",
+                    "quoteChar": "\"",
+                    "skipLineCount": 0
+                },
+                "TypeLoad": "Full"
+            }
+        ]
+    },
+    {
+        "FwkLinkedServiceId": "ExportSFTP",
+        "Entities": [
+            {
+                "Entity": "MP13ExcelFirst",
+                "Path": "/from_erdr/MP13Excel.xlsx",
+                "SourceParams": {
+                    "sheetName": "FirstSheet",
+                    "range": "",
+                    "firstRowAsHeader": true,
+                    "nullValue": "",
+                    "additionalColumns": [
+                        {
+                            "name": "MGT_fileName",
+                            "value": "$$FILEPATH"
+                        },
+                        {
+                            "name": "MGT_sheetName",
+                            "value": "FirstSheet"
+                        }
+                    ]
+                },
+                "TypeLoad": "Full"
+            },
+            {
+                "Entity": "MP13ExcelSecond",
+                "Path": "/from_erdr/MP13Excel.xlsx",
+                "SourceParams": {
+                    "sheetName": "SecondSheet",
+                    "range": "B5:D10",
+                    "firstRowAsHeader": true,
+                    "nullValue": ""
+                },
+                "TypeLoad": "Full"
+            },
+            {
+                "Entity": "ContractCSV",
+                "Path": "/from_erdr/Contract*MBM.csv",
+                "SourceParams": {
+                    "columnDelimiter": ";",
+                    "rowDelimiter": "\r\n",
+                    "compressionType": "None",
+                    "compressionLevel": "",
+                    "encodingName": "UTF-8",
+                    "escapeChar": "\\",
+                    "firstRowAsHeader": true,
+                    "nullValue": "",
+                    "quoteChar": "\"",
+                    "skipLineCount": 0
+                },
+                "TypeLoad": "Full"
+            },
+            {
+                "Entity": "ContractsCSV",
+                "Path": "/from_erdr/Contract*MBM.csv",
+                "SourceParams": {
+                    "additionalColumns": [
+                        {
+                            "name": "MGT_fileName",
+                            "value": "$$FILEPATH"
+                        }
+                    ],
+                    "ingestAllMatchingFiles": true,
+                    "columnDelimiter": ";",
+                    "rowDelimiter": "\r\n",
+                    "compressionType": "None",
+                    "compressionLevel": "",
+                    "encodingName": "UTF-8",
+                    "escapeChar": "\\",
+                    "firstRowAsHeader": true,
+                    "nullValue": "",
+                    "quoteChar": "\"",
+                    "skipLineCount": 0
+                },
+                "TypeLoad": "Full"
+            },
+            {
+                "Entity": "OrdersCSV1",
+                "Path": "/from_erdr/OrdersCSV.csv",
+                "IsMandatory": true,
+                "SourceParams": {
+                    "columnDelimiter": ";",
+                    "rowDelimiter": "\r\n",
+                    "compressionType": "None",
+                    "compressionLevel": "",
+                    "encodingName": "UTF-8",
+                    "escapeChar": "\\",
+                    "firstRowAsHeader": false,
+                    "nullValue": "",
+                    "quoteChar": "",
+                    "skipLineCount": 0,
+					"logFwkLinkedServiceId": "LandingADLS",
+					"logPath": "asmefdevxx/IncompatibleRowsLogsTest",
+                    "enableSkipIncompatibleRow": true,
+                    "mapping": {
+                        "type": "TabularTranslator",
+                        "typeConversion": true,
+                        "typeConversionSettings": {
+                            "treatBooleanAsNumber": true
+                        },
+                        "mappings": [
+                            {
+                                "source": {
+                                    "ordinal": 1,
+                                    "type": "Int32"
+                                },
+                                "sink": {
+                                    "name": "OrderID"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "ordinal": 2,
+                                    "type": "DateTime"
+                                },
+                                "sink": {
+                                    "name": "OrderDate"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "ordinal": 3,
+                                    "type": "Int32"
+                                },
+                                "sink": {
+                                    "name": "SourceSystem"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "ordinal": 4,
+                                    "type": "String"
+                                },
+                                "sink": {
+                                    "name": "Description"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "ordinal": 5,
+                                    "type": "Boolean"
+                                },
+                                "sink": {
+                                    "name": "IsValidOrder"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "ordinal": 6,
+                                    "type": "Int64"
+                                },
+                                "sink": {
+                                    "name": "NumberOfItems"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "MGT_fileName",
+                                    "type": "String"
+                                },
+                                "sink": {
+                                    "name": "MGT_fileName"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "copiedColumn01",
+                                    "type": "String"
+                                },
+                                "sink": {
+                                    "name": "copiedColumn01"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "MGT_staticValue",
+                                    "type": "String"
+                                },
+                                "sink": {
+                                    "name": "MGT_staticValue"
+                                }
+                            }
+                        ]
+                    },
+                    "additionalColumns": [
+                        {
+                            "name": "MGT_fileName",
+                            "value": "$$FILEPATH"
+                        },
+                        {
+                            "name": "copiedColumn01",
+                            "value": "$$COLUMN:Prop_2"
+                        },
+                        {
+                            "name": "MGT_staticValue",
+                            "value": "sampleValue_01"
+                        }
+                    ]
+                },
+                "TypeLoad": "Full"
+            },
+            {
+                "Entity": "OrdersCSV2",
+                "Path": "/from_erdr/OrdersCSV.csv",
+                "SourceParams": {
+                    "columnDelimiter": ";",
+                    "rowDelimiter": "\r\n",
+                    "compressionType": "None",
+                    "compressionLevel": "",
+                    "encodingName": "UTF-8",
+                    "escapeChar": "\\",
+                    "firstRowAsHeader": false,
+                    "nullValue": "",
+                    "quoteChar": "",
+                    "skipLineCount": 0,
+					"enableSkipIncompatibleRow": true,
+                    "mapping": {
+                        "type": "TabularTranslator",
+                        "typeConversion": true,
+                        "typeConversionSettings": {
+                            "treatBooleanAsNumber": true
+                        },
+                        "mappings": [
+                            {
+                                "source": {
+                                    "ordinal": 1,
+                                    "type": "Int32"
+                                },
+                                "sink": {
+                                    "name": "OrderID"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "ordinal": 2,
+                                    "type": "DateTime"
+                                },
+                                "sink": {
+                                    "name": "OrderDate"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "ordinal": 3,
+                                    "type": "String"
+                                },
+                                "sink": {
+                                    "name": "SourceSystem"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "ordinal": 4,
+                                    "type": "String"
+                                },
+                                "sink": {
+                                    "name": "Description"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "ordinal": 5,
+                                    "type": "Boolean"
+                                },
+                                "sink": {
+                                    "name": "IsValidOrder"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "ordinal": 6,
+                                    "type": "Int64"
+                                },
+                                "sink": {
+                                    "name": "NumberOfItems"
+                                }
+                            }
+                        ]
+                    }
+                },
+                "TypeLoad": "Full"
+            },
+            {
+                "Entity": "OrdersCSV3",
+                "Path": "/from_erdr/OrdersCSV.csv",
+                "Params": {
+                    "archivePath": "/from_erdr/archive"
+                },
+                "SourceParams": {
+                    "columnDelimiter": ";",
+                    "rowDelimiter": "\r\n",
+                    "compressionType": "None",
+                    "compressionLevel": "",
+                    "encodingName": "UTF-8",
+                    "escapeChar": "\\",
+                    "firstRowAsHeader": false,
+                    "nullValue": "",
+                    "quoteChar": "",
+                    "skipLineCount": 0,
+                    "mapping": {
+                        "type": "TabularTranslator",
+                        "typeConversion": true,
+                        "typeConversionSettings": {
+                            "treatBooleanAsNumber": true
+                        },
+                        "mappings": [
+                            {
+                                "source": {
+                                    "ordinal": 1,
+                                    "type": "Int32"
+                                },
+                                "sink": {
+                                    "name": "OrderID"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "ordinal": 2,
+                                    "type": "DateTime"
+                                },
+                                "sink": {
+                                    "name": "OrderDate"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "ordinal": 3,
+                                    "type": "String"
+                                },
+                                "sink": {
+                                    "name": "SourceSystem"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "ordinal": 4,
+                                    "type": "String"
+                                },
+                                "sink": {
+                                    "name": "Description"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "ordinal": 5,
+                                    "type": "Boolean"
+                                },
+                                "sink": {
+                                    "name": "IsValidOrder"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "ordinal": 6,
+                                    "type": "Int64"
+                                },
+                                "sink": {
+                                    "name": "NumberOfItems"
+                                }
+                            }
+                        ]
+                    }
+                },
+                "TypeLoad": "Full"
+            },
+            {
+                "Entity": "OrdersTXT",
+                "Path": "/from_erdr/OrdersTXT.txt",
+                "SourceParams": {
+                    "columnDelimiter": ";",
+                    "rowDelimiter": "\r\n",
+                    "compressionType": "None",
+                    "compressionLevel": "",
+                    "encodingName": "UTF-8",
+                    "escapeChar": "\\",
+                    "firstRowAsHeader": true,
+                    "nullValue": "",
+                    "quoteChar": "",
+                    "skipLineCount": 0,
+                    "mapping": {
+                        "type": "TabularTranslator",
+                        "typeConversion": true,
+                        "mappings": [
+                            {
+                                "source": {
+                                    "name": "ID",
+                                    "type": "Int32"
+                                },
+                                "sink": {
+                                    "name": "OrderID"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "OrdDate",
+                                    "type": "DateTime"
+                                },
+                                "sink": {
+                                    "name": "OrderDate"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "Source",
+                                    "type": "String"
+                                },
+                                "sink": {
+                                    "name": "SourceSystem"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "Desc",
+                                    "type": "String"
+                                },
+                                "sink": {
+                                    "name": "Description"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "Valid",
+                                    "type": "Boolean"
+                                },
+                                "sink": {
+                                    "name": "IsValidOrder"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "NumItems",
+                                    "type": "Int64"
+                                },
+                                "sink": {
+                                    "name": "NumberOfItems"
+                                }
+                            }
+                        ]
+                    }
+                },
+                "TypeLoad": "Full"
+            },
+            {
+                "Entity": "CreditLinesXML",
+                "Path": "/from_erdr/GS0001263_MASTER_DATA.xml",
+                "SourceParams": {
+                    "encodingName": "UTF-8",
+                    "nullValue": "",
+                    "mapping": {
+                        "type": "TabularTranslator",
+                        "mappings": [
+                            {
+                                "source": {
+                                    "path": "['CreditEntityType']"
+                                },
+                                "sink": {
+                                    "name": "CreditEntityType",
+                                    "type": "String"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "path": "['CreditLineReference']"
+                                },
+                                "sink": {
+                                    "name": "CreditLineReference",
+                                    "type": "String"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "path": "['CreditLineName']"
+                                },
+                                "sink": {
+                                    "name": "CreditLineName",
+                                    "type": "String"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "path": "['ParentCreditLineReference']"
+                                },
+                                "sink": {
+                                    "name": "ParentCreditLineReference",
+                                    "type": "String"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "path": "['CreditLineStatus']"
+                                },
+                                "sink": {
+                                    "name": "CreditLineStatus",
+                                    "type": "String"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "path": "['CreditLineLimit']"
+                                },
+                                "sink": {
+                                    "name": "CreditLineLimit",
+                                    "type": "String"
+                                }
+                            }
+                        ],
+                        "collectionReference": "$['Feed']['OrganisationData']['Organisation']['CreditLines']['CreditLine']",
+                        "mapComplexValuesToString": true
+                    }
+                },
+                "TypeLoad": "Full"
+            }
+        ]
+    },
+    {
+        "FwkLinkedServiceId": "LandingADLS",
+        "Entities": [
+            {
+                "Entity": "InvoiceHeader",
+                "Path": "asmefdevxx/ADLSSource/InvoiceHeader.csv",
+                "SourceParams": {
+                    "columnDelimiter": ";",
+                    "rowDelimiter": "\r\n",
+                    "compressionType": "None",
+                    "compressionLevel": "",
+                    "encodingName": "UTF-8",
+                    "escapeChar": "\\",
+                    "firstRowAsHeader": true,
+                    "nullValue": "",
+                    "quoteChar": "\"",
+                    "skipLineCount": 0,
+                    "enableSkipIncompatibleRow": true
+                },
+                "TypeLoad": "Full"
+            }
+        ]
+    }
+]

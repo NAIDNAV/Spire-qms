@@ -1,0 +1,23 @@
+[
+    {
+        "Query": "SELECT * FROM Application_MEF_History.Customer WHERE MGT_isCurrent = TRUE AND MGT_isDeleted = FALSE",
+        "Path": "History_Customer.csv",
+        "Params": {
+            "header": true,
+            "nullValue": null
+        }
+    },
+    {
+        "Query": "SELECT * FROM Application_MEF_History.CustomerAddress WHERE MGT_isCurrent = TRUE AND MGT_isDeleted = FALSE",
+        "Path": "History_CustomerAddress.csv",
+        "Params": {
+            "header": true,
+            "nullValue": null
+        }
+    },
+    {
+        "FwkLinkedServiceId": "CompartmentADLS",
+        "SourcePath": "dldata/history/Files/CustomerAddress.csv",
+        "Path": "History_CustomerAddress_File.csv"
+    }
+]

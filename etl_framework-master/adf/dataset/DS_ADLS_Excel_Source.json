@@ -1,0 +1,65 @@
+{
+	"name": "DS_ADLS_Excel_Source",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_adls",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"InstanceURL": {
+					"value": "@dataset().FwkItem['InstanceURL']",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"FwkItem": {
+				"type": "array"
+			},
+			"ds_inputFileName": {
+				"type": "string"
+			},
+			"ds_inputFilePath": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "01 Ingestion Module DS"
+		},
+		"annotations": [],
+		"type": "Excel",
+		"typeProperties": {
+			"sheetName": {
+				"value": "@json(dataset().FwkItem['Params']).sheetName",
+				"type": "Expression"
+			},
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@dataset().ds_inputFileName",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@replace(concat('$', dataset().ds_inputFilePath), concat('$', split(dataset().ds_inputFilePath, '/')[0], '/'), '')",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "@split(dataset().ds_inputFilePath, '/')[0]",
+					"type": "Expression"
+				}
+			},
+			"range": {
+				"value": "@json(dataset().FwkItem['Params']).range",
+				"type": "Expression"
+			},
+			"firstRowAsHeader": {
+				"value": "@json(dataset().FwkItem['Params']).firstRowAsHeader",
+				"type": "Expression"
+			},
+			"nullValue": {
+				"value": "@json(dataset().FwkItem['Params']).nullValue",
+				"type": "Expression"
+			}
+		},
+		"schema": []
+	}
+}

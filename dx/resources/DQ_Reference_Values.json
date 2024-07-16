@@ -1,0 +1,27 @@
+[
+    {
+        "ReferenceKey": "CountryRegion",
+        "Value": "United States",
+        "Description": "Reference key-value description"
+    },
+    {
+        "ReferenceKey": "CountryRegion",
+        "Value": "Canada",
+        "Description": "Reference key-value description"
+    },
+    {
+        "ReferenceKey": "CountryRegion",
+        "Value": "United Kingdom",
+        "Description": "Reference key-value description"
+    },
+    {
+        "ReferenceKey": "AddressType",
+        "Value": "Main Office",
+        "Description": "Reference key-value description"
+    },
+    {
+        "ReferenceKey": "AddressType",
+        "Value": "Shipping",
+        "Description": "Reference key-value description"
+    }
+]

@@ -1,0 +1,17 @@
+{
+	"name": "ddfcpmef",
+	"properties": {
+		"globalParameters": {
+			"MetadataDB": {
+				"type": "string",
+				"value": "westeurope_spire_platform_dev.application_mef_metadata"
+			}
+		}
+	},
+	"location": "westeurope",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "d9eef589-81ce-4e49-806e-f16f112d7145",
+		"tenantId": "9652d7c2-1ccf-4940-8151-4a92bd474ed0"
+	}
+}

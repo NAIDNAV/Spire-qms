@@ -1,0 +1,29 @@
+[
+    {
+        "Query": "SELECT * FROM Application_MEF_History.Customer WHERE MGT_isCurrent = TRUE AND MGT_isDeleted = FALSE",
+        "Path": "History_Customer.csv",
+        "Params": {
+            "header": true,
+            "nullValue": null,
+            "sep": ";",
+            "quoteAll": true,
+            "quote": "'"
+        }
+    },
+    {
+        "Query": "SELECT * FROM Application_MEF_History.SalesOrderHeader",
+        "Path": "History_SalesOrderHeader.csv",
+        "Params": {
+            "header": true,
+            "nullValue": null,
+            "sep": ";",
+            "quoteAll": true,
+            "quote": "'"
+        }
+    },
+    {
+        "FwkLinkedServiceId": "CompartmentADLS",
+        "SourcePath": "dldata/history/Files/Customer.csv",
+        "Path": "History_Customer_File.csv"
+    }
+]

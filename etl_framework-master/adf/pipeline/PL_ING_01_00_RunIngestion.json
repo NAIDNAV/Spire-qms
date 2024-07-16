@@ -1,0 +1,290 @@
+{
+	"name": "PL_ING_01_00_RunIngestion",
+	"properties": {
+		"activities": [
+			{
+				"name": "Execute Mandatoriness Check",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "PL_ING_01_01_FileMandatorinessCheck",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"FwkTriggerId": {
+							"value": "@pipeline().parameters.FwkTriggerId",
+							"type": "Expression"
+						},
+						"EntRunId": {
+							"value": "@pipeline().parameters.EntRunId",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "IfMandatorinessNotMisiing",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Execute Mandatoriness Check",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@if(equals(activity('Execute Mandatoriness Check').output.pipelineReturnValue['outputIsMissingMandatoryFiles'],'N'),true, false)\n",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "setOutputStopETLTrue",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "pipelineReturnValue",
+								"value": [
+									{
+										"key": "outputStopETL",
+										"value": {
+											"type": "Boolean",
+											"content": true
+										}
+									}
+								],
+								"setSystemVariable": true
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Execute ProcessIngestion",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_ING_01_02_PreProcessIngestion",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"EntRunId": {
+										"value": "@pipeline().parameters.EntRunId",
+										"type": "Expression"
+									},
+									"EntTriggerTime": {
+										"value": "@pipeline().parameters.EntTriggerTime",
+										"type": "Expression"
+									},
+									"FwkTriggerId": {
+										"value": "@pipeline().parameters.FwkTriggerId",
+										"type": "Expression"
+									},
+									"FwkLayerId": {
+										"value": "@pipeline().parameters.FwkLayerId",
+										"type": "Expression"
+									},
+									"ADFTriggerName": {
+										"value": "@pipeline().parameters.ADFTriggerName",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "setOutputStopETLResult",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Execute ProcessIngestion",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "pipelineReturnValue",
+								"value": [
+									{
+										"key": "outputStopETL",
+										"value": {
+											"type": "Expression",
+											"content": "@activity('Execute ProcessIngestion').output.pipelineReturnValue['outputStopETL']"
+										}
+									}
+								],
+								"setSystemVariable": true
+							}
+						},
+						{
+							"name": "setOutputStoporETLResultonFailure",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Execute ProcessIngestion",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "pipelineReturnValue",
+								"value": [
+									{
+										"key": "outputStopETL",
+										"value": {
+											"type": "Expression",
+											"content": "@activity('Execute ProcessIngestion').output.pipelineReturnValue['outputStopETL']"
+										}
+									}
+								],
+								"setSystemVariable": true
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "setStopETLAfterIngestion",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "IfMandatorinessNotMisiing",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "pipelineReturnValue",
+					"value": [
+						{
+							"key": "outputStopETLAfterIngestion",
+							"value": {
+								"type": "Expression",
+								"content": "@activity('Execute ProcessIngestion').output.pipelineReturnValue['outputStopETL']"
+							}
+						}
+					],
+					"setSystemVariable": true
+				}
+			},
+			{
+				"name": "setStoporContinueETLAfterIngestionFailure",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "IfMandatorinessNotMisiing",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "pipelineReturnValue",
+					"value": [
+						{
+							"key": "outputStopETLAfterIngestion",
+							"value": {
+								"type": "Expression",
+								"content": "@activity('Execute ProcessIngestion').output.pipelineReturnValue['outputStopETL']"
+							}
+						}
+					],
+					"setSystemVariable": true
+				}
+			},
+			{
+				"name": "setOutputStopOnFailureFileMandatoriness",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Execute Mandatoriness Check",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "pipelineReturnValue",
+					"value": [
+						{
+							"key": "outputStopETLAfterIngestion",
+							"value": {
+								"type": "Boolean",
+								"content": true
+							}
+						}
+					],
+					"setSystemVariable": true
+				}
+			}
+		],
+		"parameters": {
+			"EntRunId": {
+				"type": "string"
+			},
+			"EntTriggerTime": {
+				"type": "string"
+			},
+			"FwkTriggerId": {
+				"type": "string"
+			},
+			"FwkLayerId": {
+				"type": "string"
+			},
+			"ADFTriggerName": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "01 Ingestion Module"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-07-06T08:29:20Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

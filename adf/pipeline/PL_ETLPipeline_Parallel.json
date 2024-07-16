@@ -1,0 +1,182 @@
+{
+	"name": "PL_ETLPipeline_Parallel",
+	"properties": {
+		"activities": [
+			{
+				"name": "Until pipeline has finished running",
+				"type": "Until",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(variables('ContinueWithETLPipelineRun'), true)",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Execute Is Pipeline Running",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_PipelineRunStatus",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"CancelIfAlreadyRunning": {
+										"value": "@pipeline().parameters.CancelIfAlreadyRunning",
+										"type": "Expression"
+									},
+									"ADFTriggerName": {
+										"value": "@pipeline().parameters.ADFTriggerName",
+										"type": "Expression"
+									},
+									"FwkLayerId": {
+										"value": "@pipeline().parameters.FwkLayerId",
+										"type": "Expression"
+									},
+									"MasterRunId": {
+										"value": "@pipeline().GroupId",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Set ContinueWithETLPipelineRun",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Execute Is Pipeline Running",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "ContinueWithETLPipelineRun",
+								"value": {
+									"value": "@activity('Execute Is Pipeline Running').output.pipelineReturnValue.ContinueWithETLPipelineRun",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "If Wait Condition",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "Set ContinueWithETLPipelineRun",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(variables('ContinueWithETLPipelineRun'),false)",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "Wait1",
+										"type": "Wait",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"waitTimeInSeconds": 300
+										}
+									}
+								]
+							}
+						}
+					],
+					"timeout": "0.12:00:00"
+				}
+			},
+			{
+				"name": "Execute ETL Pipeline",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Until pipeline has finished running",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "PL_ETLPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"EntRunId": {
+							"value": "@pipeline().RunId",
+							"type": "Expression"
+						},
+						"EntTriggerTime": {
+							"value": "@pipeline().TriggerTime",
+							"type": "Expression"
+						},
+						"FwkTriggerId": {
+							"value": "@pipeline().parameters.FwkTriggerId",
+							"type": "Expression"
+						},
+						"FwkLayerId": {
+							"value": "@pipeline().parameters.FwkLayerId",
+							"type": "Expression"
+						},
+						"ADFTriggerName": {
+							"value": "@if(\n    equals(pipeline().parameters.ADFTriggerName, 'none'),\n    pipeline().TriggerName,\n    pipeline().parameters.ADFTriggerName\n)",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"EntRunId": {
+				"type": "string"
+			},
+			"EntTriggerTime": {
+				"type": "string"
+			},
+			"FwkTriggerId": {
+				"type": "string"
+			},
+			"FwkLayerId": {
+				"type": "string"
+			},
+			"ADFTriggerName": {
+				"type": "string"
+			},
+			"CancelIfAlreadyRunning": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"ContinueWithETLPipelineRun": {
+				"type": "Boolean",
+				"defaultValue": false
+			}
+		},
+		"annotations": []
+	}
+}

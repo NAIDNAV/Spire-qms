@@ -1,0 +1,457 @@
+{
+	"name": "PL_TRN_01_RunTransformation",
+	"properties": {
+		"activities": [
+			{
+				"name": "sp_FwkLogInsert",
+				"description": "Executes the SP spi_FwkLogInsert to insert record into FwkLog table with the execution module information by pipeline id and with null status.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spi_FwkLogInsert]",
+					"storedProcedureParameters": {
+						"EntRunId": {
+							"value": {
+								"value": "@pipeline().parameters.EntRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"Module": {
+							"value": {
+								"value": "Transformation",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"StartDate": {
+							"value": {
+								"value": "@formatdatetime(pipeline().TriggerTime)",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						},
+						"ADFTriggerName": {
+							"value": {
+								"value": "@pipeline().parameters.ADFTriggerName",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "LookupDtOrder",
+				"description": "Executes the SP ‘sps_LookupDtOrder’ to get the information about DtOrder numbers.",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "sp_FwkLogInsert",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[dbo].[sps_LookupDtOrder]",
+						"storedProcedureParameters": {
+							"FwkLayerId": {
+								"value": {
+									"value": "@if(\n    equals(pipeline().parameters.FwkLayerId, 'none'),\n    null,\n    pipeline().parameters.FwkLayerId\n)",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "DS_SQL_Configuration",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ForEachDtOrder",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "LookupDtOrder",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@array(activity('LookupDtOrder').output.value)",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "IfDtOrderIsStopped",
+							"type": "IfCondition",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@variables('varStopETLforDtOrder')",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "Execute PL_TRN_02_ProcessDtOrder",
+										"type": "ExecutePipeline",
+										"dependsOn": [],
+										"policy": {
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "PL_TRN_02_ProcessDtOrder",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"EntRunId": {
+													"value": "@pipeline().parameters.EntRunId",
+													"type": "Expression"
+												},
+												"EntTriggerTime": {
+													"value": "@pipeline().parameters.EntTriggerTime",
+													"type": "Expression"
+												},
+												"FwkTriggerId": {
+													"value": "@pipeline().parameters.FwkTriggerId",
+													"type": "Expression"
+												},
+												"DtOrderItem": {
+													"value": "@item()",
+													"type": "Expression"
+												},
+												"FwkLayerId": {
+													"value": "@pipeline().parameters.FwkLayerId",
+													"type": "Expression"
+												},
+												"ADFTriggerName": {
+													"value": "@pipeline().parameters.ADFTriggerName",
+													"type": "Expression"
+												}
+											}
+										}
+									},
+									{
+										"name": "setVarStopETLforDtOrder",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "Execute PL_TRN_02_ProcessDtOrder",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "varStopETLforDtOrder",
+											"value": {
+												"value": "@activity('Execute PL_TRN_02_ProcessDtOrder').output.pipelineReturnValue['outputStopETL']\n",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "setVarStoporContinueETLforDtOrderonFailure",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "Execute PL_TRN_02_ProcessDtOrder",
+												"dependencyConditions": [
+													"Failed"
+												]
+											}
+										],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "varStopETLforDtOrder",
+											"value": {
+												"value": "@activity('Execute PL_TRN_02_ProcessDtOrder').output.pipelineReturnValue['outputStopETL']\n",
+												"type": "Expression"
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "sp_UpdateExecutionLog_failed",
+				"description": "Executes the SP spu_FwkLogUpdate to update the record created by the ‘InsertIntoFwkLog’ activity in the table ‘FwkLog’ by updating the columns ‘PipelineStatus’ to ‘Success’.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "ForEachDtOrder",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spu_FwkLogUpdate]",
+					"storedProcedureParameters": {
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStatus": {
+							"value": {
+								"value": "Failed",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"JobRunUrl": {
+							"value": null,
+							"type": "String"
+						},
+						"ErrorMessage": {
+							"value": null,
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "setStopETLAfterTransformation",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "If ETLSetToStop",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "pipelineReturnValue",
+					"value": [
+						{
+							"key": "outputStopETLAfterTransformation",
+							"value": {
+								"type": "Expression",
+								"content": "@variables('varStopETLforDtOrder')"
+							}
+						}
+					],
+					"setSystemVariable": true
+				}
+			},
+			{
+				"name": "If ETLSetToStop",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "ForEachDtOrder",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@variables('varStopETLforDtOrder')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "sp_UpdateExecutionLog_Suceeded",
+							"description": "",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[spu_FwkLogUpdate]",
+								"storedProcedureParameters": {
+									"ModuleRunId": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"PipelineStatus": {
+										"value": {
+											"value": "Succeeded",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"JobRunUrl": {
+										"value": null,
+										"type": "String"
+									},
+									"ErrorMessage": {
+										"value": null,
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_configurationDB",
+								"type": "LinkedServiceReference"
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "sp_UpdateExecutionLog_Stopped",
+							"description": "",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[spu_FwkLogUpdate]",
+								"storedProcedureParameters": {
+									"ModuleRunId": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"PipelineStatus": {
+										"value": {
+											"value": "Stopped",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"JobRunUrl": {
+										"value": null,
+										"type": "String"
+									},
+									"ErrorMessage": {
+										"value": null,
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_configurationDB",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"EntRunId": {
+				"type": "string"
+			},
+			"EntTriggerTime": {
+				"type": "string"
+			},
+			"FwkTriggerId": {
+				"type": "string"
+			},
+			"FwkLayerId": {
+				"type": "string"
+			},
+			"ADFTriggerName": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"varStopETLforDtOrder": {
+				"type": "Boolean",
+				"defaultValue": false
+			}
+		},
+		"folder": {
+			"name": "02 Transformation Module"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-07-06T08:29:17Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

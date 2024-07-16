@@ -1,0 +1,317 @@
+{
+	"name": "PL_EXP_02_02_SFTPExport",
+	"properties": {
+		"activities": [
+			{
+				"name": "Export File to SFTP",
+				"description": "Copy a table from a database to the configurated Sink dynamically taking by input FwkItem, SrcPath.",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "spi_ExpLogInsert",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "BinarySource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"deleteFilesAfterCompletion": true
+						},
+						"formatSettings": {
+							"type": "BinaryReadSettings"
+						}
+					},
+					"sink": {
+						"type": "BinarySink",
+						"storeSettings": {
+							"type": "SftpWriteSettings",
+							"operationTimeout": "01:00:00",
+							"useTempFileRename": true
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "DS_ADLS_BIN_File_Export",
+						"type": "DatasetReference",
+						"parameters": {
+							"InstanceURL": {
+								"value": "@pipeline().parameters.FwkItem['InstanceURL']",
+								"type": "Expression"
+							},
+							"FullPath": {
+								"value": "@pipeline().parameters.FwkItem['Path']",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "DS_SFTP_Binary_Target",
+						"type": "DatasetReference",
+						"parameters": {
+							"FwkItem": {
+								"value": "@pipeline().parameters.FwkItem",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "spu_ExpLogUpdate_succeeded",
+				"description": "Executes the SP spu_ExpLogUpdate to update record into ExpLog table with the execution module information.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Export File to SFTP",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spu_ExpLogUpdate]",
+					"storedProcedureParameters": {
+						"ExpOutputId": {
+							"value": {
+								"value": "@pipeline().parameters.FwkItem['ExpOutputId']",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"EntRunId": {
+							"value": {
+								"value": "@pipeline().parameters.EntRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().parameters.ModuleRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStatus": {
+							"value": {
+								"value": "Succeeded",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"CopyDuration": {
+							"value": {
+								"value": "@if(\n    contains(activity('Export File to SFTP').output, 'copyDuration'),\n    activity('Export File to SFTP').output.copyDuration,\n    null\n)",
+								"type": "Expression"
+							},
+							"type": "Double"
+						},
+						"Throughput": {
+							"value": {
+								"value": "@if(\n    contains(activity('Export File to SFTP').output, 'throughput'),\n    activity('Export File to SFTP').output.throughput,\n    null\n)",
+								"type": "Expression"
+							},
+							"type": "Double"
+						},
+						"ErrorMessage": {
+							"value": null,
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "spu_ExpLogUpdate_failed",
+				"description": "Executes the SP spu_ExpLogUpdate to update record into ExpLog table with the execution module information.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Export File to SFTP",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spu_ExpLogUpdate]",
+					"storedProcedureParameters": {
+						"ExpOutputId": {
+							"value": {
+								"value": "@pipeline().parameters.FwkItem['ExpOutputId']",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"EntRunId": {
+							"value": {
+								"value": "@pipeline().parameters.EntRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().parameters.ModuleRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStatus": {
+							"value": {
+								"value": "Failed",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"CopyDuration": {
+							"value": null,
+							"type": "Double"
+						},
+						"Throughput": {
+							"value": null,
+							"type": "Double"
+						},
+						"ErrorMessage": {
+							"value": {
+								"value": "@if(\n    and(\n        contains(activity('Export File to SFTP').output, 'errors'),\n        greater(length(activity('Export File to SFTP').output.errors), 0)\n    ),\n    activity('Export File to SFTP').output.errors[0].Message,\n    null\n)",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "spi_ExpLogInsert",
+				"description": "Executes the SP spi_ExpLogInsert to insert record into ExpLog table with the execution module information.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[spi_ExpLogInsert]",
+					"storedProcedureParameters": {
+						"ExpOutputId": {
+							"value": {
+								"value": "@pipeline().parameters.FwkItem['ExpOutputId']",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"EntRunId": {
+							"value": {
+								"value": "@pipeline().parameters.EntRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ModuleRunId": {
+							"value": {
+								"value": "@pipeline().parameters.ModuleRunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStatus": {
+							"value": {
+								"value": "InProgress",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"StartDate": {
+							"value": {
+								"value": "@formatdatetime(pipeline().TriggerTime)",
+								"type": "Expression"
+							},
+							"type": "Datetime"
+						},
+						"CopyDuration": {
+							"value": null,
+							"type": "Double"
+						},
+						"Throughput": {
+							"value": null,
+							"type": "Double"
+						},
+						"ErrorMessage": {
+							"value": null,
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_configurationDB",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"FwkItem": {
+				"type": "array"
+			},
+			"PL_01TriggerTime": {
+				"type": "string"
+			},
+			"EntRunId": {
+				"type": "string"
+			},
+			"ModuleRunId": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "03 Export Module"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-07-06T08:29:14Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,1337 @@
+[
+    {
+        "DatabaseName": "FileStore",
+        "Entities": [
+            {
+                "EntityName": "Ingestion_Configuration",
+                "Expectations": [
+                    {
+                        "Description": "Order of columns must match",
+                        "ExpectationType": "expect_table_columns_to_match_ordered_list",
+                        "KwArgs": {
+                            "column_list": [
+                                "FwkLinkedServiceId",
+                                "Entity",
+                                "Path",
+                                "Params",
+                                "MetadataParams",
+                                "SourceParams",
+                                "TypeLoad",
+                                "WmkColumnName",
+                                "SelectedColumnNames",
+                                "TableHint",
+                                "QueryHint",
+                                "Query",
+                                "IsMandatory"
+                            ]
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "FwkLinkedServiceId is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "FwkLinkedServiceId"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "FwkLinkedServiceId, Entity"
+                    },
+                    {
+                        "Description": "FwkLinkedServiceId has be be present in FWK_LINKED_SERVICE_DF in environment config",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "FwkLinkedServiceId NOT IN (SELECT FwkLinkedServiceId FROM FwkLinkedService)"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "FwkLinkedServiceId, Entity"
+                    },
+                    {
+                        "Description": "Entity is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "Entity"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "FwkLinkedServiceId, Entity, Params"
+                    },
+                    {
+                        "Description": "Path is mandatory when ingesting data from a file",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "joinTable": "FwkLinkedService",
+                            "joinType": "LEFT",
+                            "joinColumns": "FwkLinkedServiceId,FwkLinkedServiceId",
+                            "condition": "Path IS NULL AND FwkLinkedService.SourceType IN ('FileShare', 'SFTP', 'ADLS')"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "FwkLinkedServiceId, Entity, Path"
+                    },
+                    {
+                        "Description": "Path with container name is mandatory when ingesting data from ADLS",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "joinTable": "FwkLinkedService",
+                            "joinType": "LEFT",
+                            "joinColumns": "FwkLinkedServiceId,FwkLinkedServiceId",
+                            "condition": "Path NOT LIKE '%/%' AND FwkLinkedService.SourceType = 'ADLS'"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "FwkLinkedServiceId, Entity, Path"
+                    },
+                    {
+                        "Description": "Params must be either empty or valid JSON object",
+                        "ExpectationType": "expect_column_values_to_be_json_parseable",
+                        "KwArgs": {
+                            "column": "Params"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "FwkLinkedServiceId, Entity, Params"
+                    },
+                    {
+                        "Description": "Params JSON object can contain only following keys: 'sinkEntityName', 'fwkTriggerId' , 'archivePath' and 'archiveLinkedServiceId'",
+                        "ExpectationType": "expect_column_values_to_match_regex",
+                        "KwArgs": {
+                            "column": "Params",
+                            "regex": "(^$|^\\s*\\{\\s*\\\"(sinkEntityName|fwkTriggerId|archivePath|archiveLinkedServiceId)\\\"\\s*:\\s*\\\"[^\\\"]+\\\"\\s*(,\\s*\\\"(sinkEntityName|fwkTriggerId|archivePath|archiveLinkedServiceId)\\\"\\s*:\\s*\\\"[^\\\"]+\\\"\\s*)*\\}\\s*$)"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "FwkLinkedServiceId, Entity, Params"
+                    },
+                    {
+                        "Description": "Params.archivePath can be defined only once per file",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "column": "Path",
+                            "condition": "get_json_object(Params, '$.archivePath') IS NOT NULL GROUP BY FwkLinkedServiceId, Path HAVING count(*) > 1"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "FwkLinkedServiceId, Entity, Params"
+                    },
+                    {
+                        "Description": "MetadataParams must be either empty or valid JSON object",
+                        "ExpectationType": "expect_column_values_to_be_json_parseable",
+                        "KwArgs": {
+                            "column": "MetadataParams"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "FwkLinkedServiceId, Entity, MetadataParams"
+                    },
+                    {
+                        "Description": "MetadataParams JSON object can contain only following keys: 'primaryColumns' and 'wmkDataType'",
+                        "ExpectationType": "expect_column_values_to_match_regex",
+                        "KwArgs": {
+                            "column": "MetadataParams",
+                            "regex": "(^$|^\\s*\\{\\s*\\\"(primaryColumns|wmkDataType)\\\"\\s*:\\s*\\\"[^\\\"]+\\\"\\s*(,\\s*\\\"(primaryColumns|wmkDataType)\\\"\\s*:\\s*\\\"[^\\\"]+\\\"\\s*)*\\}\\s*$)"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "FwkLinkedServiceId, Entity, MetadataParams"
+                    },
+                    {
+                        "Description": "MetadataParams.wmkDataType must be either 'datetime', 'stringDatetime' or 'numeric'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(MetadataParams, '$.wmkDataType') IS NOT NULL AND get_json_object(MetadataParams, '$.wmkDataType') NOT IN ('datetime', 'stringDatetime', 'numeric')"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "FwkLinkedServiceId, Entity, MetadataParams"
+                    },
+                    {
+                        "Description": "MetadataParams.wmkDataType is mandatory when delta ingesting data from database via query",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(MetadataParams, '$.wmkDataType') IS NULL AND TypeLoad = 'Delta' AND Query IS NOT NULL"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "FwkLinkedServiceId, Entity, MetadataParams, TypeLoad, Query"
+                    },
+                    {
+                        "Description": "SourceParams must be either empty or valid JSON object",
+                        "ExpectationType": "expect_column_values_to_be_json_parseable",
+                        "KwArgs": {
+                            "column": "SourceParams"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "FwkLinkedServiceId, Entity, SourceParams"
+                    },
+                    {
+                        "Description": "SourceParams is mandatory when ingesting data from a file",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "SourceParams IS NULL AND Path IS NOT NULL"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "FwkLinkedServiceId, Entity, SourceParams, Path"
+                    },
+                    {
+                        "Description": "SourceParams should not be set when ingesting data from database",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "SourceParams IS NOT NULL AND Path IS NULL"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "FwkLinkedServiceId, Entity, SourceParams, Path"
+                    },
+                    {
+                        "Description": "TypeLoad is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "TypeLoad"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "FwkLinkedServiceId, Entity, TypeLoad"
+                    },
+                    {
+                        "Description": "TypeLoad must be either 'Full' or 'Delta'",
+                        "ExpectationType": "expect_column_values_to_be_in_set",
+                        "KwArgs": {
+                            "column": "TypeLoad",
+                            "value_set": [
+                                "Full",
+                                "Delta"
+                            ]
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "FwkLinkedServiceId, Entity, TypeLoad"
+                    },
+                    {
+                        "Description": "TypeLoad must be 'Full' when ingesting data from a file",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "TypeLoad <> 'Full' AND Path IS NOT NULL"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "FwkLinkedServiceId, Entity, TypeLoad, Path"
+                    },
+                    {
+                        "Description": "WmkColumnName is mandatory when TypeLoad is 'Delta'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "WmkColumnName IS NULL AND TypeLoad = 'Delta'"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "FwkLinkedServiceId, Entity, WmkColumnName, TypeLoad"
+                    },
+                    {
+                        "Description": "WmkColumnName should not be set when TypeLoad is not 'Delta'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "WmkColumnName IS NOT NULL AND TypeLoad <> 'Delta'"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "FwkLinkedServiceId, Entity, WmkColumnName, TypeLoad"
+                    },
+                    {
+                        "Description": "TableHint should not be set when ingesting data from a file",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "TableHint IS NOT NULL AND Path IS NOT NULL"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "FwkLinkedServiceId, Entity, TableHint, Path"
+                    },
+                    {
+                        "Description": "QueryHint should not be set when ingesting data from a file",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "QueryHint IS NOT NULL AND Path IS NOT NULL"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "FwkLinkedServiceId, Entity, QueryHint, Path"
+                    },
+                    {
+                        "Description": "Query should not be set when ingesting data from a file",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "Query IS NOT NULL AND Path IS NOT NULL"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "FwkLinkedServiceId, Entity, Query, Path"
+                    }
+                ]
+            },
+            {
+                "EntityName": "Transformation_Configuration",
+                "Expectations": [
+                    {
+                        "Description": "Order of columns must match",
+                        "ExpectationType": "expect_table_columns_to_match_ordered_list",
+                        "KwArgs": {
+                            "column_list": [
+                                "Key",
+                                "DatabaseName",
+                                "EntityName",
+                                "Transformations",
+                                "Params"
+                            ]
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "Key is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "Key"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Key"
+                    },
+                    {
+                        "Description": "DatabaseName is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "DatabaseName"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName"
+                    },
+                    {
+                        "Description": "EntityName is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "EntityName"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName"
+                    },
+                    {
+                        "Description": "Params must be either empty or valid JSON object",
+                        "ExpectationType": "expect_column_values_to_be_json_parseable",
+                        "KwArgs": {
+                            "column": "Params"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Params"
+                    },
+                    {
+                        "Description": "Params JSON object can contain only following keys: 'writeMode', 'keyColumns', 'partitionColumns', 'sinkEntityName', 'fwkTriggerId' and 'batchNumber'",
+                        "ExpectationType": "expect_column_values_to_match_regex",
+                        "KwArgs": {
+                            "column": "Params",
+                            "regex": "(^$|^\\s*\\{\\s*\\\"(writeMode|keyColumns|partitionColumns|sinkEntityName|fwkTriggerId|batchNumber)\\\"\\s*:\\s*((\\\"[^\\\"]+\\\")|(\\[.*\\])|(\\d+))\\s*(,\\s*\\\"(writeMode|keyColumns|partitionColumns|sinkEntityName|fwkTriggerId|batchNumber)\\\"\\s*:\\s*((\\\"[^\\\"]+\\\")|(\\[.*\\])|(\\d+))\\s*)*\\}\\s*$)"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Params"
+                    },
+                    {
+                        "Description": "Params.writeMode must be either 'SCDType1', 'SCDType2', 'SCDType2Delta', 'SCDType2Delete', 'Snapshot', 'Overwrite' or 'Append'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(Params, '$.writeMode') IS NOT NULL AND get_json_object(Params, '$.writeMode') NOT IN ('SCDType1', 'SCDType2', 'SCDType2Delta', 'SCDType2Delete', 'Snapshot', 'Overwrite', 'Append')"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Params"
+                    },
+                    {
+                        "Description": "Params.keyColumns is mandatory when Params.writeMode is 'Snapshot'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(Params, '$.writeMode') = 'Snapshot' AND (get_json_object(Params, '$.keyColumns') IS NULL OR len(get_json_object(Params, '$.keyColumns')) == 0)"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Params"
+                    },
+                    {
+                        "Description": "Params.fwkTriggerId has be be present in FWK_TRIGGER_DF in environment config",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(Params, '$.fwkTriggerId') IS NOT NULL AND get_json_object(Params, '$.fwkTriggerId') NOT IN (SELECT FwkTriggerId FROM FwkTrigger)"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Params"
+                    },
+                    {
+                        "Description": "Params.bachNumber has be be whole positive number from 0 to infinity",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(Params, '$.batchNumber') is not null AND NOT get_json_object(Params, '$.batchNumber') RLIKE '^[0-9]+$'"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "EntityName, Key, Params"
+                    }
+                ]
+            },
+            {
+                "EntityName": "DQ_Configuration",
+                "Expectations": [
+                    {
+                        "Description": "Order of columns must match",
+                        "ExpectationType": "expect_table_columns_to_match_ordered_list",
+                        "KwArgs": {
+                            "column_list": [
+                                "DatabaseName",
+                                "EntityName",
+                                "Description",
+                                "ExpectationType",
+                                "KwArgs",
+                                "Quarantine",
+                                "DQLogOutput"
+                            ]
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "DatabaseName is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "DatabaseName"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description"
+                    },
+                    {
+                        "Description": "EntityName is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "EntityName"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description"
+                    },
+                    {
+                        "Description": "Description is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "Description"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description"
+                    },
+                    {
+                        "Description": "ExpectationType is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "ExpectationType"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, ExpectationType"
+                    },
+                    {
+                        "Description": "ExpectationType is not supported",
+                        "ExpectationType": "expect_column_values_to_be_in_set",
+                        "KwArgs": {
+                            "column": "ExpectationType",
+                            "value_set": [
+                                "expect_column_distinct_values_to_be_in_set",
+                                "expect_column_distinct_values_to_contain_set",
+                                "expect_column_distinct_values_to_equal_set",
+                                "expect_column_max_to_be_between",
+                                "expect_column_mean_to_be_between",
+                                "expect_column_median_to_be_between",
+                                "expect_column_min_to_be_between",
+                                "expect_column_most_common_value_to_be_in_set",
+                                "expect_column_pair_values_to_be_equal",
+                                "expect_column_pair_values_to_be_in_set",
+                                "expect_column_proportion_of_unique_values_to_be_between",
+                                "expect_column_quantile_values_to_be_between",
+                                "expect_column_stdev_to_be_between",
+                                "expect_column_sum_to_be_between",
+                                "expect_column_to_exist",
+                                "expect_column_unique_value_count_to_be_between",
+                                "expect_column_value_lengths_to_be_between",
+                                "expect_column_value_lengths_to_equal",
+                                "expect_column_values_to_be_decreasing",
+                                "expect_column_values_to_be_in_set",
+                                "expect_column_values_to_be_increasing",
+                                "expect_column_values_to_be_json_parseable",
+                                "expect_column_values_to_be_null",
+                                "expect_column_values_to_be_of_type",
+                                "expect_column_values_to_be_unique",
+                                "expect_column_values_to_match_regex",
+                                "expect_column_values_to_match_regex_list",
+                                "expect_column_values_to_match_strftime_format",
+                                "expect_column_values_to_not_be_in_set",
+                                "expect_column_values_to_not_be_null",
+                                "expect_column_values_to_not_match_regex_list",
+                                "expect_column_values_to_be_between",
+                                "expect_compound_columns_to_be_unique",
+                                "expect_multicolumn_sum_to_equal",
+                                "expect_select_column_values_to_be_unique_within_record",
+                                "expect_table_column_count_to_be_between",
+                                "expect_table_column_count_to_equal",
+                                "expect_table_columns_to_match_ordered_list",
+                                "expect_table_columns_to_match_set",
+                                "expect_table_row_count_to_be_between",
+                                "expect_table_row_count_to_equal",
+                                "expect_column_values_to_not_match_condition",
+                                "compare_datasets"
+                            ]
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, ExpectationType"
+                    },
+                    {
+                        "Description": "KwArgs is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "KwArgs"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, KwArgs"
+                    },
+                    {
+                        "Description": "KwArgs must be valid JSON object",
+                        "ExpectationType": "expect_column_values_to_be_json_parseable",
+                        "KwArgs": {
+                            "column": "KwArgs"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, KwArgs"
+                    },
+                    {
+                        "Description": "KwArgs must contain key 'column'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(KwArgs, '$.column') IS NULL AND ExpectationType LIKE 'expect_column_%' AND ExpectationType NOT LIKE 'expect_column_pair_%' AND ExpectationType <> 'expect_column_values_to_not_match_condition'"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, ExpectationType, KwArgs"
+                    },
+                    {
+                        "Description": "KwArgs must contain key 'column_A' and 'column_B'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "(get_json_object(KwArgs, '$.column_A') IS NULL OR get_json_object(KwArgs, '$.column_B') IS NULL) AND ExpectationType LIKE 'expect_column_pair_%'"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, ExpectationType, KwArgs"
+                    },
+                    {
+                        "Description": "KwArgs must contain key 'value_set'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(KwArgs, '$.value_set') IS NULL AND (ExpectationType LIKE '%_be_in_set' OR ExpectationType LIKE '%_contain_set' OR ExpectationType LIKE '%_equal_set') AND ExpectationType NOT LIKE '%_pair_values_to_be_in_set'"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, ExpectationType, KwArgs"
+                    },
+                    {
+                        "Description": "KwArgs must contain key 'value_pairs_set'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(KwArgs, '$.value_pairs_set') IS NULL AND ExpectationType LIKE '%_pair_values_to_be_in_set'"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, ExpectationType, KwArgs"
+                    },
+                    {
+                        "Description": "KwArgs must contain key 'min_value' and/or 'max_value'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "(get_json_object(KwArgs, '$.min_value') IS NULL AND get_json_object(KwArgs, '$.max_value') IS NULL) AND ExpectationType LIKE '%_be_between' AND ExpectationType NOT LIKE '%_quantile_values_to_be_between'"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, ExpectationType, KwArgs"
+                    },
+                    {
+                        "Description": "KwArgs must contain key 'value'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(KwArgs, '$.value') IS NULL AND ExpectationType LIKE '%_to_equal' AND ExpectationType NOT LIKE '%_sum_to_equal'"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, ExpectationType, KwArgs"
+                    },
+                    {
+                        "Description": "KwArgs must contain key 'sum_total'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(KwArgs, '$.sum_total') IS NULL AND ExpectationType LIKE '%_sum_to_equal'"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, ExpectationType, KwArgs"
+                    },
+                    {
+                        "Description": "KwArgs must contain key 'quantile_ranges'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(KwArgs, '$.quantile_ranges') IS NULL AND ExpectationType LIKE '%_quantile_values_to_be_between'"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, ExpectationType, KwArgs"
+                    },
+                    {
+                        "Description": "KwArgs must contain key 'type_'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(KwArgs, '$.type_') IS NULL AND ExpectationType LIKE '%_be_of_type'"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, ExpectationType, KwArgs"
+                    },
+                    {
+                        "Description": "KwArgs must contain key 'regex'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(KwArgs, '$.regex') IS NULL AND ExpectationType LIKE '%_match_regex'"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, ExpectationType, KwArgs"
+                    },
+                    {
+                        "Description": "KwArgs must contain key 'regex_list'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(KwArgs, '$.regex_list') IS NULL AND ExpectationType LIKE '%_match_regex_list'"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, ExpectationType, KwArgs"
+                    },
+                    {
+                        "Description": "KwArgs must contain key 'strftime_format'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(KwArgs, '$.strftime_format') IS NULL AND ExpectationType LIKE '%_match_strftime_format'"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, ExpectationType, KwArgs"
+                    },
+                    {
+                        "Description": "KwArgs must contain key 'column_list'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(KwArgs, '$.column_list') IS NULL AND (ExpectationType = 'expect_compound_columns_to_be_unique' OR ExpectationType = 'expect_multicolumn_sum_to_equal' OR ExpectationType = 'expect_select_column_values_to_be_unique_within_record' OR ExpectationType = 'expect_table_columns_to_match_ordered_list')"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, ExpectationType, KwArgs"
+                    },
+                    {
+                        "Description": "KwArgs must contain key 'column_set'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(KwArgs, '$.column_set') IS NULL AND ExpectationType LIKE '%_columns_to_match_set'"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, ExpectationType, KwArgs"
+                    },
+                    {
+                        "Description": "KwArgs must contain key 'condition'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(KwArgs, '$.condition') IS NULL AND ExpectationType = 'expect_column_values_to_not_match_condition'"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, ExpectationType, KwArgs"
+                    },
+                    {
+                        "Description": "KwArgs must contain key 'compareAgainst'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(KwArgs, '$.compareAgainst') IS NULL AND ExpectationType = 'compare_datasets'"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, ExpectationType, KwArgs"
+                    },
+                    {
+                        "Description": "KwArgs must contain key 'comparedColumn'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(KwArgs, '$.comparedColumn') IS NULL AND ExpectationType = 'compare_datasets'"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, ExpectationType, KwArgs"
+                    },
+                    {
+                        "Description": "KwArgs must contain key 'expectation'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(KwArgs, '$.expectation') IS NULL AND ExpectationType = 'compare_datasets'"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, ExpectationType, KwArgs"
+                    },
+                    {
+                        "Description": "KwArgs.expectation must be either 'fullMatch', 'noMissing' or 'noAddition'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(KwArgs, '$.expectation') IS NOT NULL AND get_json_object(KwArgs, '$.expectation') NOT IN ('fullMatch', 'noMissing', 'noAddition')"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, ExpectationType, KwArgs"
+                    },
+                    {
+                        "Description": "KwArgs must contain key 'joinTable'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(KwArgs, '$.joinTable') IS NULL AND (get_json_object(KwArgs, '$.joinType') IS NOT NULL OR get_json_object(KwArgs, '$.joinColumns') IS NOT NULL) AND ExpectationType = 'expect_column_values_to_not_match_condition'"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, ExpectationType, KwArgs"
+                    },
+                    {
+                        "Description": "KwArgs must contain key 'joinType'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(KwArgs, '$.joinType') IS NULL AND (get_json_object(KwArgs, '$.joinTable') IS NOT NULL OR get_json_object(KwArgs, '$.joinColumns') IS NOT NULL) AND ExpectationType = 'expect_column_values_to_not_match_condition'"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, ExpectationType, KwArgs"
+                    },
+                    {
+                        "Description": "KwArgs.joinType must be either 'INNER', 'LEFT', 'LEFT OUTER', 'RIGHT', 'RIGHT OUTER', 'FULL', 'FULL OUTER', 'SEMI', 'LEFT SEMI', 'ANTI', 'LEFT ANTI' or 'CROSS'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(KwArgs, '$.joinType') IS NOT NULL AND get_json_object(KwArgs, '$.joinType') NOT IN ('INNER', 'LEFT', 'LEFT OUTER', 'RIGHT', 'RIGHT OUTER', 'FULL', 'FULL OUTER', 'SEMI', 'LEFT SEMI', 'ANTI', 'LEFT ANTI', 'CROSS')"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, ExpectationType, KwArgs"
+                    },
+                    {
+                        "Description": "KwArgs must contain key 'joinColumns'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(KwArgs, '$.joinColumns') IS NULL AND (get_json_object(KwArgs, '$.joinType') IS NOT NULL OR get_json_object(KwArgs, '$.joinTable') IS NOT NULL) AND ExpectationType = 'expect_column_values_to_not_match_condition'"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, ExpectationType, KwArgs"
+                    },
+                    {
+                        "Description": "Duplicates are not allowed - combination of DatabaseName, EntityName, ExpectationType and KwArgs must be unique",
+                        "ExpectationType": "expect_compound_columns_to_be_unique",
+                        "KwArgs": {
+                            "column_list": [
+                                "DatabaseName",
+                                "EntityName",
+                                "ExpectationType",
+                                "KwArgs"
+                            ]
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, ExpectationType, KwArgs"
+                    },
+                    {
+                        "Description": "Quarantine is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "Quarantine"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, Quarantine"
+                    },
+                    {
+                        "Description": "Quarantine must be either 'true' or 'false'",
+                        "ExpectationType": "expect_column_values_to_be_of_type",
+                        "KwArgs": {
+                            "column": "Quarantine",
+                            "type_": "BooleanType"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "DatabaseName, EntityName, Description, Quarantine"
+                    }
+                ]
+            },
+            {
+                "EntityName": "DQ_Reference_Values",
+                "Expectations": [
+                    {
+                        "Description": "Order of columns must match",
+                        "ExpectationType": "expect_table_columns_to_match_ordered_list",
+                        "KwArgs": {
+                            "column_list": [
+                                "ReferenceKey",
+                                "Value",
+                                "Description"
+                            ]
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "ReferenceKey is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "ReferenceKey"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "ReferenceKey, Value"
+                    },
+                    {
+                        "Description": "Value is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "Value"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "ReferenceKey, Value"
+                    },
+                    {
+                        "Description": "Duplicates are not allowed - combination of ReferenceKey and Value must be unique",
+                        "ExpectationType": "expect_compound_columns_to_be_unique",
+                        "KwArgs": {
+                            "column_list": [
+                                "ReferenceKey",
+                                "Value"
+                            ]
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "ReferenceKey, Value"
+                    }
+                ]
+            },
+            {
+                "EntityName": "DQ_Reference_Pair_Values",
+                "Expectations": [
+                    {
+                        "Description": "Order of columns must match",
+                        "ExpectationType": "expect_table_columns_to_match_ordered_list",
+                        "KwArgs": {
+                            "column_list": [
+                                "ReferenceKey1",
+                                "Value1",
+                                "Description1",
+                                "ReferenceKey2",
+                                "Value2",
+                                "Description2"
+                            ]
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "ReferenceKey1 is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "ReferenceKey1"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "ReferenceKey1, Value1, ReferenceKey2, Value2"
+                    },
+                    {
+                        "Description": "Value1 is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "Value1"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "ReferenceKey1, Value1, ReferenceKey2, Value2"
+                    },
+                    {
+                        "Description": "ReferenceKey2 is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "ReferenceKey2"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "ReferenceKey1, Value1, ReferenceKey2, Value2"
+                    },
+                    {
+                        "Description": "Value2 is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "Value2"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "ReferenceKey1, Value1, ReferenceKey2, Value2"
+                    },
+                    {
+                        "Description": "Duplicates are not allowed - combination of ReferenceKey1, Value1, ReferenceKey2 and Value2 must be unique",
+                        "ExpectationType": "expect_compound_columns_to_be_unique",
+                        "KwArgs": {
+                            "column_list": [
+                                "ReferenceKey1",
+                                "Value1",
+                                "ReferenceKey2",
+                                "Value2"
+                            ]
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "ReferenceKey1, Value1, ReferenceKey2, Value2"
+                    }
+                ]
+            },
+            {
+                "EntityName": "Model_Attributes",
+                "Expectations": [
+                    {
+                        "Description": "Order of columns must match",
+                        "ExpectationType": "expect_table_columns_to_match_ordered_list",
+                        "KwArgs": {
+                            "column_list": [
+                                "Entity",
+                                "Attribute",
+                                "DataType",
+                                "IsPrimaryKey",
+                                "IsIdentity"
+                            ]
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "Entity is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "Entity"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "Entity, Attribute"
+                    },
+                    {
+                        "Description": "Attribute is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "Attribute"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "Entity, Attribute"
+                    },
+                    {
+                         "Description": "DataType is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "DataType"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "Entity, Attribute, DataType"
+                    },
+                    {
+                        "Description": "DataType must be either 'bigint', 'tinyint', 'int', 'date', 'datetime' or must start with 'varchar', 'char', 'decimal', 'numeric', 'double'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "lower(DataType) NOT IN ('bigint', 'tinyint', 'int', 'date', 'datetime') AND lower(DataType) NOT LIKE 'varchar%' AND lower(DataType) NOT LIKE 'char%' AND lower(DataType) NOT LIKE 'decimal%' AND lower(DataType) NOT LIKE 'numeric%' AND lower(DataType) NOT LIKE 'double%'"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "Entity, Attribute, DataType"
+                    },
+                    {
+                        "Description": "IsPrimaryKey is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "IsPrimaryKey"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "Entity, Attribute, IsPrimaryKey"
+                    },
+                    {
+                        "Description": "IsPrimaryKey must be either 'true' or 'false'",
+                        "ExpectationType": "expect_column_values_to_be_of_type",
+                        "KwArgs": {
+                            "column": "IsPrimaryKey",
+                            "type_": "BooleanType"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "Entity, Attribute, IsPrimaryKey"
+                    },
+                    {
+                        "Description": "IsIdentity is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "IsIdentity"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "Entity, Attribute, IsIdentity"
+                    },
+                    {
+                        "Description": "IsIdentity must be either 'true' or 'false'",
+                        "ExpectationType": "expect_column_values_to_be_of_type",
+                        "KwArgs": {
+                            "column": "IsIdentity",
+                            "type_": "BooleanType"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "Entity, Attribute, IsIdentity"
+                    }
+                ]
+            },
+            {
+                "EntityName": "Model_Relations",
+                "Expectations": [
+                    {
+                        "Description": "Order of columns must match",
+                        "ExpectationType": "expect_table_columns_to_match_ordered_list",
+                        "KwArgs": {
+                            "column_list": [
+                                "Parent",
+                                "ParentAttribute",
+                                "Child",
+                                "ChildAttribute",
+                                "KeyType",
+                                "RolePlayingGroup"
+                            ]
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "Parent is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "Parent"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "Parent, ParentAttribute"
+                    },
+                    {
+                        "Description": "ParentAttribute is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "ParentAttribute"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "Parent, ParentAttribute"
+                    },
+                    {
+                        "Description": "Parent table with parent attribute should be present in Attributes configuration",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "joinTable": "Attributes",
+                            "joinType": "LEFT",
+                            "joinColumns": "Parent,Entity|ParentAttribute,Attribute",
+                            "condition": "Entity IS NULL"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "Parent, ParentAttribute"
+                    },
+                    {
+                        "Description": "Child is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "Child"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "Child, ChildAttribute"
+                    },
+                    {
+                        "Description": "ChildAttribute is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "ChildAttribute"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "Child, ChildAttribute"
+                    },
+                    {
+                        "Description": "Child table with child attribute should be present in Attributes configuration",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "joinTable": "Attributes",
+                            "joinType": "LEFT",
+                            "joinColumns": "Child,Entity|ChildAttribute,Attribute",
+                            "condition": "Entity IS NULL"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "Child, ChildAttribute"
+                    },
+                    {
+                        "Description": "KeyType is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "KeyType"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "Parent, ParentAttribute, Child, ChildAttribute"
+                    }
+                ]
+            },
+            {
+                "EntityName": "Model_Keys",
+                "Expectations": [
+                    {
+                        "Description": "Order of columns must match",
+                        "ExpectationType": "expect_table_columns_to_match_ordered_list",
+                        "KwArgs": {
+                            "column_list": [
+                                "Entity",
+                                "KeyType",
+                                "Attribute"
+                            ]
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "Entity is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "Entity"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "Entity, KeyType, Attribute"
+                    },
+                    {
+                        "Description": "Entity with attribute should be present in Attributes configuration",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "joinTable": "Attributes",
+                            "joinType": "LEFT",
+                            "joinColumns": "Entity,Entity|Attribute,Attribute",
+                            "condition": "Attributes.Entity IS NULL"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "Entity, Attribute"
+                    },
+                    {
+                        "Description": "KeyType is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "KeyType"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "Entity, KeyType, Attribute"
+                    },
+                    {
+                        "Description": "Attribute is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "Attribute"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "Entity, KeyType, Attribute"
+                    }
+                ]
+            },
+            {
+                "EntityName": "Model_Transformation_Configuration",
+                "Expectations": [
+                    {
+                        "Description": "Order of columns must match",
+                        "ExpectationType": "expect_table_columns_to_match_ordered_list",
+                        "KwArgs": {
+                            "column_list": [
+                                "Key",
+                                "EntityName",
+                                "Params"
+                            ]
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "EntityName is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "EntityName"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "EntityName, Key"
+                    },
+                    {
+                        "Description": "Key is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "Key"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "EntityName, Key"
+                    },
+                    {
+                        "Description": "Params must be either empty or valid JSON object",
+                        "ExpectationType": "expect_column_values_to_be_json_parseable",
+                        "KwArgs": {
+                            "column": "Params"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "EntityName, Key, Params"
+                    },
+                    {
+                        "Description": "Params JSON object can contain only following keys: 'writeMode', 'keyColumns', 'partitionColumns', 'fwkTriggerId' and 'batchNumber'",
+                        "ExpectationType": "expect_column_values_to_match_regex",
+                        "KwArgs": {
+                            "column": "Params",
+                            "regex": "(^$|^\\s*\\{\\s*\\\"(writeMode|keyColumns|partitionColumns|fwkTriggerId|batchNumber)\\\"\\s*:\\s*((\\\"[^\\\"]+\\\")|(\\[.*\\])|(\\d+))\\s*(,\\s*\\\"(writeMode|keyColumns|partitionColumns|fwkTriggerId|batchNumber)\\\"\\s*:\\s*((\\\"[^\\\"]+\\\")|(\\[.*\\])|(\\d+))\\s*)*\\}\\s*$)"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "EntityName, Key, Params"
+                    },
+                    {
+                        "Description": "Params.writeMode must be either 'Overwrite' or 'SCDType1' or 'Snapshot'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(Params, '$.writeMode') IS NOT NULL AND get_json_object(Params, '$.writeMode') NOT IN ('Overwrite', 'SCDType1', 'Snapshot')"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "EntityName, Key, Params"
+                    },
+                    {
+                        "Description": "Params.keyColumns is mandatory when Params.writeMode is 'Snapshot'",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(Params, '$.writeMode') = 'Snapshot' AND (get_json_object(Params, '$.keyColumns') IS NULL OR len(get_json_object(Params, '$.keyColumns')) == 0)"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "EntityName, Key, Params"
+                    },
+                    {
+                        "Description": "Params.fwkTriggerId has be be present in FWK_TRIGGER_DF in environment config",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(Params, '$.fwkTriggerId') IS NOT NULL AND get_json_object(Params, '$.fwkTriggerId') NOT IN (SELECT FwkTriggerId FROM FwkTrigger)"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "EntityName, Key, Params"
+                    },
+                    {
+                        "Description": "Params.bachNumber has be be whole positive number from 0 to infinity",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "get_json_object(Params, '$.batchNumber') is not null AND NOT get_json_object(Params, '$.batchNumber') RLIKE '^[0-9]+$'"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "EntityName, Key, Params"
+                    }
+                ]
+            },
+            {
+                "EntityName": "Export_Configuration",
+                "Expectations": [
+                    {
+                        "Description": "Order of columns must match",
+                        "ExpectationType": "expect_table_columns_to_match_ordered_list",
+                        "KwArgs": {
+                            "column_list": [
+                                "Query",
+                                "Path",
+                                "Params",
+                                "FwkLinkedServiceId",
+                                "SourcePath",
+                                "Entity",
+                                "PreCopyScript"
+                            ]
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "Either Query or FwkLinkedServiceId has to be specified, not both",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "(Query IS NULL AND FwkLinkedServiceId IS NULL) OR (Query IS NOT NULL AND FwkLinkedServiceId IS NOT NULL)"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "Query, FwkLinkedServiceId"
+                    },
+                    {
+                        "Description": "If Query is specified, either Path or Entity has to be specified, not both",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "Query IS NOT NULL AND ((Path IS NULL AND Entity IS NULL) OR (Path IS NOT NULL AND Entity IS NOT NULL))"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "Query, Path, Entity"
+                    },
+                    {
+                        "Description": "Params can be specified only if Query and Path are specified",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "Params IS NOT NULL AND (Query IS NULL OR Path IS NULL)"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "Query, Path, Params"
+                    },
+                    {
+                        "Description": "Params must be valid JSON object",
+                        "ExpectationType": "expect_column_values_to_be_json_parseable",
+                        "KwArgs": {
+                            "column": "Params"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "Query, Path, Params"
+                    },
+                    {
+                        "Description": "PreCopyScript can be specified only if Query and Entity are specified",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "PreCopyScript IS NOT NULL AND (Query IS NULL OR Entity IS NULL)"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "Query, Entity, PreCopyScript"
+                    },
+                    {
+                        "Description": "FwkLinkedServiceId has be be present in FWK_LINKED_SERVICE_DF in environment config",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "FwkLinkedServiceId NOT IN (SELECT FwkLinkedServiceId FROM FwkLinkedService)"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "FwkLinkedServiceId"
+                    },
+                    {
+                        "Description": "SourcePath is mandatory when FwkLinkedServiceId is specified",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "SourcePath IS NULL AND FwkLinkedServiceId IS NOT NULL"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "FwkLinkedServiceId, SourcePath"
+                    },
+                    {
+                        "Description": "Path is mandatory when FwkLinkedServiceId is specified",
+                        "ExpectationType": "expect_column_values_to_not_match_condition",
+                        "KwArgs": {
+                            "condition": "Path IS NULL AND FwkLinkedServiceId IS NOT NULL"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "FwkLinkedServiceId, Path"
+                    }
+                ]
+            },
+            {
+                "EntityName": "Workflows_Configuration",
+                "Expectations": [
+                    {
+                        "Description": "Order of columns must match",
+                        "ExpectationType": "expect_table_columns_to_match_ordered_list",
+                        "KwArgs": {
+                            "column_list": [
+                                "ADFTriggerName",
+                                "WorkflowId",
+                                "URL",
+                                "RequestBody"
+                            ]
+                        },
+                        "Quarantine": false
+                    },
+                    {
+                        "Description": "ADFTriggerName is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "ADFTriggerName"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "ADFTriggerName"
+                    },
+                    {
+                        "Description": "WorkflowId is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "WorkflowId"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "ADFTriggerName, WorkflowId"
+                    },
+                    {
+                        "Description": "Duplicates are not allowed - combination of ADFTriggerName and WorkflowId must be unique",
+                        "ExpectationType": "expect_compound_columns_to_be_unique",
+                        "KwArgs": {
+                            "column_list": [
+                                "ADFTriggerName",
+                                "WorkflowId"
+                            ]
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "ADFTriggerName, WorkflowId"
+                    },
+                    {
+                        "Description": "URL is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "URL"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "ADFTriggerName, WorkflowId, URL"
+                    },
+                    {
+                        "Description": "RequestBody is mandatory",
+                        "ExpectationType": "expect_column_values_to_not_be_null",
+                        "KwArgs": {
+                            "column": "RequestBody"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "ADFTriggerName, WorkflowId, RequestBody"
+                    },
+                    {
+                        "Description": "RequestBody must be valid JSON object",
+                        "ExpectationType": "expect_column_values_to_be_json_parseable",
+                        "KwArgs": {
+                            "column": "RequestBody"
+                        },
+                        "Quarantine": false,
+                        "DQLogOutput": "ADFTriggerName, WorkflowId, RequestBody"
+                    }
+                ]
+            }
+        ]
+    }
+]

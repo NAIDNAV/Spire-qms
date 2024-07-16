@@ -1,0 +1,72 @@
+[
+    {
+        "Entity": "Address",
+        "KeyType": "PIdentifier",
+        "Attribute": "WK_Address_Identifier"
+    },
+    {
+        "Entity": "Address",
+        "KeyType": "BusinessIdentifier",
+        "Attribute": "AddressID"
+    },
+    {
+        "Entity": "Customer",
+        "KeyType": "PIdentifier",
+        "Attribute": "WK_Customer_Identifier"
+    },
+    {
+        "Entity": "Customer",
+        "KeyType": "BusinessIdentifier",
+        "Attribute": "CustomerID"
+    },
+    {
+        "Entity": "CustomerNoIdentity",
+        "KeyType": "PIdentifier",
+        "Attribute": "CustomerID"
+    },
+    {
+        "Entity": "CustomerAddress",
+        "KeyType": "PIdentifier",
+        "Attribute": "WK_CustomerAddress_Identifier"
+    },
+    {
+        "Entity": "CustomerAddress",
+        "KeyType": "BusinessIdentifier",
+        "Attribute": "CustomerID"
+    },
+    {
+        "Entity": "CustomerAddress",
+        "KeyType": "BusinessIdentifier",
+        "Attribute": "AddressID"
+    },
+    {
+        "Entity": "SalesOrderHeader",
+        "KeyType": "PIdentifier",
+        "Attribute": "WK_SalesOrderHeader_Identifier"
+    },
+    {
+        "Entity": "SalesOrderHeader",
+        "KeyType": "BusinessIdentifier",
+        "Attribute": "SalesOrderID"
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "KeyType": "PIdentifier",
+        "Attribute": "WK_DimCustomer_Identifier"
+    },
+    {
+        "Entity": "DimCustomerOracle",
+        "KeyType": "BusinessIdentifier",
+        "Attribute": "CustomerKey"
+    },
+    {
+        "Entity": "DimCurrency",
+        "KeyType": "PIdentifier",
+        "Attribute": "WK_DimCurrency_Identifier"
+    },
+    {
+        "Entity": "DimCurrency",
+        "KeyType": "BusinessIdentifier",
+        "Attribute": "CurrencyKey"
+    }
+]

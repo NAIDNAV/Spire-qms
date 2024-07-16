@@ -1,0 +1,81 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "factoryName": {
+            "value": "ddfcpmef"
+        },
+        "ADLS_accountKey": {
+            "value": ""
+        },
+        "LadeStationen_password": {
+            "value": ""
+        },
+        "PL_LogToMattermost_properties_parameters_Channel_defaultValue": {
+            "value": "mobi-coreteam"
+        },
+        "PL_LogToMattermost_properties_parameters_MatterMostWebHookURL_defaultValue": {
+            "value": "https://matter.i.mercedes-benz.com/hooks/i5h8ns4trigb5c6ipkwrk314br"
+        },
+        "PL_PipelineRunStatus_properties_parameters_AzureRestApiUrl_defaultValue": {
+            "value": "https://management.azure.com//subscriptions/775f9e05-bbee-446a-aa43-3d2296410d19/resourceGroups/0001-d-cpmef"
+        },
+        "PL_StartOrStopTrigger_properties_parameters_AzureRestApiUrl_defaultValue": {
+            "value": "https://management.azure.com//subscriptions/775f9e05-bbee-446a-aa43-3d2296410d19/resourceGroups/0001-d-cpmef"
+        },
+        "PL_TriggerCreation_properties_parameters_AzureRestApiUrl_defaultValue": {
+            "value": "https://management.azure.com//subscriptions/775f9e05-bbee-446a-aa43-3d2296410d19/resourceGroups/0001-d-cpmef"
+        },
+        "ADLS_properties_typeProperties_url": {
+            "value": "https://sqlvaqk6s27cspupcm.dfs.core.windows.net"
+        },
+        "LS_ADB_properties_typeProperties_domain": {
+            "value": "https://adb-8731781706562404.4.azuredatabricks.net"
+        },
+        "LS_ADB_properties_typeProperties_workspaceResourceId": {
+            "value": "/subscriptions/775f9e05-bbee-446a-aa43-3d2296410d19/resourceGroups/0001-d-cpmef/providers/Microsoft.Databricks/workspaces/ddxcpmef"
+        },
+        "LS_adls_properties_typeProperties_url": {
+            "value": "@{linkedService().InstanceURL}"
+        },
+        "LS_configurationDB_properties_typeProperties_connectionString_secretName": {
+            "value": "dbconfig"
+        },
+        "LS_databricks_properties_parameters_ClusterId_defaultValue": {
+            "value": "0214-064848-zi0j9fjh"
+        },
+        "LS_databricks_properties_typeProperties_domain": {
+            "value": "https://adb-8731781706562404.4.azuredatabricks.net"
+        },
+        "LS_databricks_properties_typeProperties_workspaceResourceId": {
+            "value": "/subscriptions/775f9e05-bbee-446a-aa43-3d2296410d19/resourceGroups/0001-d-cpmef/providers/Microsoft.Databricks/workspaces/ddxcpmef"
+        },
+        "LS_databricks_properties_typeProperties_existingClusterId": {
+            "value": "@linkedService().ClusterId"
+        },
+        "LS_keyvault_properties_typeProperties_baseUrl": {
+            "value": "https://dkvcpmef.vault.azure.net/"
+        },
+        "LS_odata_properties_typeProperties_url": {
+            "value": "@{linkedService().ServiceUrl}"
+        },
+        "LS_oracledatabase_properties_typeProperties_connectionString_secretName": {
+            "value": "@linkedService().SecretName"
+        },
+        "LS_snowflake_properties_typeProperties_connectionString_secretName": {
+            "value": "@linkedService().ConnectionString"
+        },
+        "LS_sqldatabase_properties_typeProperties_connectionString_secretName": {
+            "value": "@linkedService().SecretName"
+        },
+        "LS_sqlonpremdatabase_properties_typeProperties_connectionString_secretName": {
+            "value": "@linkedService().SecretName"
+        },
+        "LadeStationen_properties_typeProperties_url": {
+            "value": "https://data.geo.admin.ch/ch.bfe.ladestellen-elektromobilitaet/status/oicp/ch.bfe.ladestellen-elektromobilitaet.json"
+        },
+        "SHIR_properties_typeProperties_linkedInfo_resourceId": {
+            "value": "/subscriptions/5c9d5542-5f6e-425f-a7b4-edc59c9f83a0/resourcegroups/dev-rg-hub-shir-emea/providers/Microsoft.DataFactory/factories/dev-adf-hub-emea/integrationruntimes/dev-adf-shir-hub-emea"
+        }
+    }
+}
